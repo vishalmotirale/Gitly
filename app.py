@@ -38,6 +38,10 @@ def fetch_public_repos(username):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    # If already logged in, skip search and go to dashboard
+    if 'oauth_token' in session:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         if username:
@@ -71,24 +75,36 @@ def callback():
     
 @app.route('/dashboard')
 def dashboard():
+    username = request.args.get('username')
+    
     if 'oauth_token' in session:
         github = OAuth2Session(client_id, token=session['oauth_token'])
-        user_resp = github.get(USER_API)
-        repos_resp = github.get(REPO_API)
-        return render_template('dashboard.html', user=user_resp.json(), repos=repos_resp.json())
-    
-    username = request.args.get('username')
-    if not username: return redirect(url_for('index'))
-    user_resp = requests.get(f"https://api.github.com/users/{username}")
-    if user_resp.status_code == 403: return render_template('dashboard.html', error="Rate limit exceeded. Try again later.", repos=[], user=None)
-    if user_resp.status_code != 200: return render_template('dashboard.html', error="User not found.", repos=[], user=None)
-    
-    user_data = user_resp.json()
-    repo_data = fetch_public_repos(username)
-    if isinstance(repo_data, dict) and 'error' in repo_data:
-        return render_template('dashboard.html', error=repo_data['error'], user=user_data, repos=[])
+        if not username:
+            user = github.get(USER_API).json()
+            repos = github.get(REPO_API).json()
+        else:
+            user = github.get(f"https://api.github.com/users/{username}").json()
+            repos, page = [], 1
+            while True:
+                r = github.get(f"https://api.github.com/users/{username}/repos", params={"per_page": 100, "page": page})
+                data = r.json()
+                if r.status_code != 200 or not data: break
+                repos += data; page += 1
+        return render_template('dashboard.html', user=user, repos=repos)
 
-    return render_template('dashboard.html', user=user_data, repos=repo_data)
+    if not username:
+        return redirect(url_for('index'))
+
+    u = requests.get(f"https://api.github.com/users/{username}")
+    if u.status_code != 200:
+        return render_template('dashboard.html', error="User not found or rate limit exceeded.", repos=[], user=None)
+
+    user = u.json()
+    repos = fetch_public_repos(username)
+    if isinstance(repos, dict):
+        return render_template('dashboard.html', error=repos['error'], repos=[], user=user)
+
+    return render_template('dashboard.html', user=user, repos=repos)
 
 @app.route('/logout')
 def logout(): 
