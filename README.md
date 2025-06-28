@@ -1,4 +1,3 @@
-# Gitly : 
 # Gitly 🔍
 
 Gitly is a simple and elegant Flask web app to explore **GitHub repositories** by username, with an option to log in and view **private repositories** using GitHub OAuth.
