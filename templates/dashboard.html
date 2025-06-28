@@ -6,122 +6,146 @@
   <title>Gitly Dashboard</title>
   <style>
     body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       background-color: #0d1117;
       color: #c9d1d9;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
     }
+
     .container {
-      max-width: 960px;
+      max-width: 1000px;
       margin: auto;
       padding: 2rem;
     }
+
     .profile {
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 2rem;
     }
+
     .profile img {
+      width: 130px;
+      height: 130px;
       border-radius: 50%;
-      width: 120px;
-      height: 120px;
-      border: 3px solid #30363d;
+      border: 3px solid #58a6ff;
     }
+
     .profile h1 {
-      margin: 0.5rem 0;
+      margin: 1rem 0 0.2rem;
       color: #58a6ff;
     }
-    .bio {
-      font-style: italic;
+
+    .bio, .meta {
       color: #8b949e;
+      text-align: center;
+      margin-top: 0.4rem;
     }
-    .meta, .stats {
-      margin-top: 0.5rem;
+
+    .stats {
+      margin-top: 1rem;
       font-size: 0.95rem;
       color: #8b949e;
     }
-    .stats strong, .stats a {
-      color: #c9d1d9;
+
+    .nav {
+      margin-top: 1rem;
+      text-align: center;
     }
+
+    .nav a {
+      color: #58a6ff;
+      margin: 0 8px;
+      text-decoration: none;
+    }
+
+    .nav a:hover {
+      text-decoration: underline;
+    }
+
     .filters {
       margin: 2rem 0 1rem;
       display: flex;
-      flex-wrap: wrap;
       gap: 1rem;
+      flex-wrap: wrap;
       align-items: center;
-      justify-content: center;
     }
+
     .filters select, .filters input {
-      background-color: #161b22;
-      color: #c9d1d9;
+      padding: 0.5rem;
       border: 1px solid #30363d;
       border-radius: 6px;
-      padding: 0.5rem;
-      font-size: 14px;
+      background-color: #161b22;
+      color: #c9d1d9;
     }
+
     .repos {
-      margin-top: 1rem;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
     }
+
     .repo {
       background-color: #161b22;
       padding: 1rem;
-      border-radius: 8px;
-      transition: 0.3s;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      border: 1px solid #30363d;
     }
+
     .repo:hover {
       background-color: #21262d;
+      border: 1px solid #58a6ff;
+      box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+      transform: scale(1.02);
     }
-    .repo h3 {
-      margin: 0 0 0.5rem 0;
-    }
+
     .repo h3 a {
       color: #58a6ff;
       text-decoration: none;
     }
+
     .repo p {
-      font-size: 0.85rem;
+      margin: 0.5rem 0;
+      font-size: 0.88rem;
       color: #8b949e;
     }
-    .nav {
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-    .nav a {
-      margin: 0 10px;
-      color: #58a6ff;
-      text-decoration: none;
-    }
+
     .error {
       text-align: center;
-      padding: 20px;
       color: #ff7b72;
+      margin-top: 2rem;
+    }
+
+    .no-repos {
+      text-align: center;
+      margin-top: 2rem;
+      color: #8b949e;
     }
   </style>
 </head>
 <body>
   <div class="container">
     {% if error %}
-      <div class="error">
-        <h2>⚠️ {{ error }}</h2>
-      </div>
+      <div class="error"><h2>⚠️ {{ error }}</h2></div>
     {% endif %}
 
     {% if user %}
       <div class="profile">
         <img src="{{ user.avatar_url }}" alt="User Avatar">
         <h1>{{ user.name or user.login }}</h1>
-        <p class="bio">{{ user.bio or "No bio available." }}</p>
-        <p class="meta">
+        <div class="bio">{{ user.bio or "No bio provided." }}</div>
+        <div class="meta">
           📍 {{ user.location or "Unknown" }} • 👥 {{ user.followers }} followers • {{ user.following }} following
-        </p>
+        </div>
         <div class="stats">
           📦 Public Repos: <strong>{{ user.public_repos }}</strong>
-          {% if session.get('oauth_token') %}
+          {% if user.total_private_repos is defined %}
             • 🔒 Private Repos: <strong>{{ user.total_private_repos }}</strong>
           {% else %}
-            • <a href="{{ url_for('login') }}" style="color:#58a6ff;">Login for private repositories</a>
+            • 🔒 <a href="{{ url_for('login') }}">Log in to view private repositories</a>
           {% endif %}
         </div>
         <div class="nav">
@@ -132,27 +156,21 @@
     {% endif %}
 
     {% if repos %}
-      <!-- Filters -->
       <div class="filters">
-        <select id="languageFilter">
+        <input type="text" placeholder="Filter by name..." oninput="filterRepos(this)">
+        <select onchange="filterRepos()">
           <option value="">All Languages</option>
-          {% for lang in repos | map(attribute='language') | select | unique %}
-            {% if lang %}
-              <option value="{{ lang }}">{{ lang }}</option>
-            {% endif %}
+          {% for lang in repos|map(attribute='language')|reject('equalto', None)|unique %}
+            <option value="{{ lang }}">{{ lang }}</option>
           {% endfor %}
         </select>
-        <input type="number" id="starFilter" placeholder="Min Stars" min="0">
       </div>
 
-      <!-- Repo Grid -->
       <div class="repos" id="repoList">
         {% for repo in repos %}
-          <div class="repo" 
-               data-language="{{ repo.language or '' }}" 
-               data-stars="{{ repo.stargazers_count }}">
+          <div class="repo" data-language="{{ repo.language or '' }}" data-name="{{ repo.name|lower }}">
             <h3><a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a></h3>
-            <p>{{ repo.description or "No description provided." }}</p>
+            <p>{{ repo.description or "No description." }}</p>
             <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or "N/A" }}</p>
             <p>🕒 Updated: {{ repo.updated_at[:10] }}</p>
           </div>
@@ -160,35 +178,23 @@
       </div>
     {% else %}
       {% if not error %}
-        <p style="text-align: center; margin-top: 2rem;">No repositories to show.</p>
+        <div class="no-repos">No repositories to display.</div>
       {% endif %}
     {% endif %}
   </div>
 
-  <!-- JS Filter Logic -->
   <script>
-    const languageFilter = document.getElementById('languageFilter');
-    const starFilter = document.getElementById('starFilter');
-    const repos = document.querySelectorAll('.repo');
-
-    function applyFilters() {
-      const selectedLang = languageFilter.value.toLowerCase();
-      const minStars = parseInt(starFilter.value) || 0;
+    function filterRepos() {
+      const nameInput = document.querySelector('input[type="text"]').value.toLowerCase();
+      const language = document.querySelector('select').value;
+      const repos = document.querySelectorAll('.repo');
 
       repos.forEach(repo => {
-        const repoLang = (repo.dataset.language || "").toLowerCase();
-        const repoStars = parseInt(repo.dataset.stars);
-
-        const show =
-          (!selectedLang || repoLang === selectedLang) &&
-          (repoStars >= minStars);
-
-        repo.style.display = show ? 'block' : 'none';
+        const matchesLang = !language || repo.dataset.language === language;
+        const matchesName = repo.dataset.name.includes(nameInput);
+        repo.style.display = matchesLang && matchesName ? 'block' : 'none';
       });
     }
-
-    languageFilter.addEventListener('change', applyFilters);
-    starFilter.addEventListener('input', applyFilters);
   </script>
 </body>
 </html>
