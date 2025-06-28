@@ -56,11 +56,15 @@ def callback():
     try:
         if 'oauth_state' not in session:
             return redirect(url_for('index'))
+
         github = OAuth2Session(client_id, state=session['oauth_state'])
         session['oauth_token'] = github.fetch_token(
-            TOKEN_URL, client_secret=client_secret, authorization_response=request.url
+            TOKEN_URL,
+            client_secret=client_secret,
+            authorization_response=request.url
         )
         return redirect(url_for('dashboard'))
+
     except MismatchingStateError:
         session.pop('oauth_state', None)
         return redirect(url_for('login'))
