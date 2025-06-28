@@ -11,6 +11,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
 client_id = os.getenv("GITHUB_CLIENT_ID")
 client_secret = os.getenv("GITHUB_CLIENT_SECRET")
 
@@ -68,17 +69,22 @@ def callback():
 def dashboard():
     if 'oauth_token' in session:
         github = OAuth2Session(client_id, token=session['oauth_token'])
-        return render_template('dashboard.html', user=github.get(USER_API).json(), repos=github.get(REPO_API).json())
+        user_resp = github.get(USER_API)
+        repos_resp = github.get(REPO_API)
+        return render_template('dashboard.html', user=user_resp.json(), repos=repos_resp.json())
     
     username = request.args.get('username')
     if not username: return redirect(url_for('index'))
-    u = requests.get(f"https://api.github.com/users/{username}")
-    if u.status_code == 403: return render_template('dashboard.html', error="Rate limit exceeded", repos=[], user=None)
-    if u.status_code != 200: return render_template('dashboard.html', error="User not found", repos=[], user=None)
+    user_resp = requests.get(f"https://api.github.com/users/{username}")
+    if user_resp.status_code == 403: return render_template('dashboard.html', error="Rate limit exceeded. Try again later.", repos=[], user=None)
+    if user_resp.status_code != 200: return render_template('dashboard.html', error="User not found.", repos=[], user=None)
     
-    repos = fetch_public_repos(username)
-    if isinstance(repos, dict): return render_template('dashboard.html', error=repos['error'], repos=[], user=u.json())
-    return render_template('dashboard.html', user=u.json(), repos=repos)
+    user_data = user_resp.json()
+    repo_data = fetch_public_repos(username)
+    if isinstance(repo_data, dict) and 'error' in repo_data:
+        return render_template('dashboard.html', error=repo_data['error'], user=user_data, repos=[])
+
+    return render_template('dashboard.html', user=user_data, repos=repo_data)
 
 @app.route('/logout')
 def logout(): 
