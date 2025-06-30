@@ -78,34 +78,43 @@ def dashboard():
     username = request.args.get('username')
 
     if 'oauth_token' in session:
+        # Use OAuth token for all authenticated requests
         github = OAuth2Session(client_id, token=session['oauth_token'])
 
-        if not username:
-            # Logged-in user, get their private + public repos
-            user = github.get(USER_API).json()
-            repos, page = [], 1
-            while True:
-                r = github.get(REPO_API, params={"per_page": 100, "page": page})
-                data = r.json()
-                if r.status_code != 200 or not data:
-                    break
-                repos += data
-                page += 1
-        else:
-            # Logged-in but viewing another user's public repos
-            user = github.get(f"https://api.github.com/users/{username}").json()
+        try:
+            # Case 1: No username param – show logged-in user's private + public repos
+            if not username:
+                user = github.get(USER_API).json()
+                repos, page = [], 1
+                while True:
+                    r = github.get(REPO_API, params={"per_page": 100, "page": page})
+                    data = r.json()
+                    if r.status_code != 200 or not data: break
+                    repos += data
+                    page += 1
+                return render_template('dashboard.html', user=user, repos=repos)
+
+            # Case 2: Logged-in user viewing another profile (authenticated)
+            user_resp = github.get(f"https://api.github.com/users/{username}")
+            if user_resp.status_code != 200:
+                return render_template('dashboard.html', error="User not found.", repos=[], user=None)
+            user = user_resp.json()
+
             repos, page = [], 1
             while True:
                 r = github.get(f"https://api.github.com/users/{username}/repos", params={"per_page": 100, "page": page})
                 data = r.json()
-                if r.status_code != 200 or not data:
-                    break
+                if r.status_code != 200 or not data: break
                 repos += data
                 page += 1
 
-        return render_template('dashboard.html', user=user, repos=repos)
+            return render_template('dashboard.html', user=user, repos=repos)
 
-    # Guest access (not logged in)
+        except Exception as e:
+            print(f"GitHub API error: {e}")
+            return render_template('dashboard.html', error="Failed to fetch repositories.", repos=[], user=None)
+
+    # If user not logged in – fallback to unauthenticated (subject to rate limit)
     if not username:
         return redirect(url_for('index'))
 
@@ -114,12 +123,15 @@ def dashboard():
         return render_template('dashboard.html', error="User not found or rate limit exceeded.", repos=[], user=None)
 
     user = u.json()
-    repos = fetch_public_repos(username)
-    if isinstance(repos, dict):
-        return render_template('dashboard.html', error=repos['error'], repos=[], user=user)
+    repos, page = [], 1
+    while True:
+        r = requests.get(f"https://api.github.com/users/{username}/repos", params={"per_page": 100, "page": page})
+        data = r.json()
+        if r.status_code != 200 or not data: break
+        repos += data
+        page += 1
 
     return render_template('dashboard.html', user=user, repos=repos)
-
 @app.route('/logout')
 def logout(): 
     session.clear()
