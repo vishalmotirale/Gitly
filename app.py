@@ -50,7 +50,7 @@ def index():
 
 @app.route('/login')
 def login():
-    github = OAuth2Session(client_id, scope="repo")
+    github = OAuth2Session(client_id, scope=["repo"])
     auth_url, state = github.authorization_url(AUTH_URL)
     session['oauth_state'] = state
     return redirect(auth_url)
@@ -76,22 +76,36 @@ def callback():
 @app.route('/dashboard')
 def dashboard():
     username = request.args.get('username')
-    
+
     if 'oauth_token' in session:
         github = OAuth2Session(client_id, token=session['oauth_token'])
+
         if not username:
+            # Logged-in user, get their private + public repos
             user = github.get(USER_API).json()
-            repos = github.get(REPO_API).json()
+            repos, page = [], 1
+            while True:
+                r = github.get(REPO_API, params={"per_page": 100, "page": page})
+                data = r.json()
+                if r.status_code != 200 or not data:
+                    break
+                repos += data
+                page += 1
         else:
+            # Logged-in but viewing another user's public repos
             user = github.get(f"https://api.github.com/users/{username}").json()
             repos, page = [], 1
             while True:
                 r = github.get(f"https://api.github.com/users/{username}/repos", params={"per_page": 100, "page": page})
                 data = r.json()
-                if r.status_code != 200 or not data: break
-                repos += data; page += 1
+                if r.status_code != 200 or not data:
+                    break
+                repos += data
+                page += 1
+
         return render_template('dashboard.html', user=user, repos=repos)
 
+    # Guest access (not logged in)
     if not username:
         return redirect(url_for('index'))
 

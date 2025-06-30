@@ -8,7 +8,7 @@
     body {
       background-color: #0d1117;
       color: #c9d1d9;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
     }
@@ -19,6 +19,7 @@
     }
     .profile {
       text-align: center;
+      margin-bottom: 2rem;
     }
     .profile img {
       border-radius: 50%;
@@ -34,9 +35,9 @@
       font-style: italic;
       color: #8b949e;
     }
-    .meta, .stats {
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
+    .meta {
+      margin-top: 0.3rem;
+      font-size: 0.9rem;
       color: #8b949e;
     }
     .stats strong {
@@ -52,23 +53,38 @@
       background-color: #161b22;
       padding: 1rem;
       border-radius: 8px;
-      transition: transform 0.3s, background-color 0.3s;
+      transition: all 0.3s ease;
       cursor: pointer;
+      border: 1px solid #30363d;
+      box-shadow: 0 0 0 0 transparent;
     }
     .repo:hover {
-      background-color: #21262d;
-      transform: translateY(-4px);
+      border-color: #58a6ff;
+      box-shadow: 0 0 10px 1px rgba(88, 166, 255, 0.4);
+      transform: scale(1.02);
+      background-color: #1c2128;
     }
     .repo h3 a {
       color: #58a6ff;
       text-decoration: none;
     }
-    .repo h3 a:hover {
-      text-decoration: underline;
-    }
     .repo p {
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       color: #8b949e;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .filters select {
+      padding: 8px 12px;
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 6px;
     }
     .nav {
       text-align: center;
@@ -79,33 +95,31 @@
       color: #58a6ff;
       text-decoration: none;
     }
-    .nav a:hover {
-      text-decoration: underline;
-    }
     .error {
       text-align: center;
       padding: 20px;
       color: #ff7b72;
     }
-    .filters {
-      text-align: center;
-      margin-top: 2rem;
-    }
-    .filters select, .filters input {
-      padding: 8px;
-      margin: 0 5px;
-      border-radius: 5px;
-      border: 1px solid #30363d;
-      background-color: #161b22;
-      color: #c9d1d9;
-    }
-    .repo-count {
-      text-align: center;
-      margin-top: 1rem;
-      font-size: 1rem;
-      color: #8b949e;
-    }
   </style>
+  <script>
+    function filterRepos() {
+      const lang = document.getElementById("langFilter").value.toLowerCase();
+      const stars = document.getElementById("starFilter").value;
+      document.querySelectorAll('.repo').forEach(repo => {
+        const repoLang = repo.getAttribute("data-lang")?.toLowerCase() || "";
+        const repoStars = parseInt(repo.getAttribute("data-stars")) || 0;
+        const matchesLang = !lang || repoLang === lang;
+        const matchesStars = !stars || (
+          stars === "1" ? repoStars < 10 :
+          stars === "2" ? repoStars < 100 :
+          stars === "3" ? repoStars < 500 :
+          stars === "4" ? repoStars < 1000 :
+          stars === "5" ? repoStars >= 1000 : true
+        );
+        repo.style.display = (matchesLang && matchesStars) ? "block" : "none";
+      });
+    }
+  </script>
 </head>
 <body>
   <div class="container">
@@ -120,81 +134,57 @@
         <img src="{{ user.avatar_url }}" alt="User Avatar">
         <h1>{{ user.name or user.login }}</h1>
         <p class="bio">{{ user.bio or "No bio available." }}</p>
-        <p class="meta">
-          📍 {{ user.location or "Unknown" }} • 👥 {{ user.followers }} followers • {{ user.following }} following
-        </p>
+        <p class="meta">📍 {{ user.location or "Unknown" }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
         <div class="stats">
           📦 Public Repos: <strong>{{ user.public_repos }}</strong>
+          {% if user.total_private_repos is defined %}
+            • 🔒 Private Repos: <strong>{{ user.total_private_repos }}</strong>
+          {% endif %}
         </div>
         <div class="nav">
           🔗 <a href="{{ user.html_url }}" target="_blank">GitHub Profile</a>
-          {% if session.oauth_token %}
-            • 🚪 <a href="{{ url_for('logout') }}">Logout</a>
-          {% endif %}
+          • 🚪 <a href="{{ url_for('logout') }}">Logout</a>
         </div>
+        {% if session.oauth_token and not request.args.get('username') %}
+          <p style="color: #8b949e; margin-top: 1rem;">✅ You are viewing your private and public repositories.</p>
+        {% endif %}
       </div>
     {% endif %}
 
     {% if repos %}
       <div class="filters">
-        <label for="language">Filter by Language:</label>
-        <select id="language">
-          <option value="">All</option>
-          {% for lang in repos|map(attribute='language')|reject('equalto', None)|unique %}
+        <select id="langFilter" onchange="filterRepos()">
+          <option value="">All Languages</option>
+          {% for lang in repos|map(attribute='language')|select|string|unique %}
             <option value="{{ lang }}">{{ lang }}</option>
           {% endfor %}
         </select>
 
-        <label for="stars">Min Stars:</label>
-        <input type="number" id="stars" placeholder="0" min="0" />
+        <select id="starFilter" onchange="filterRepos()">
+          <option value="">All Stars</option>
+          <option value="1">⭐ Less than 10</option>
+          <option value="2">⭐ Less than 100</option>
+          <option value="3">⭐ Less than 500</option>
+          <option value="4">⭐ Less than 1000</option>
+          <option value="5">⭐ 1000 or more</option>
+        </select>
       </div>
 
-      <div class="repo-count" id="repo-count">
-        Showing {{ repos|length }} repositories
-      </div>
-
-      <div class="repos" id="repo-list">
+      <div class="repos">
         {% for repo in repos %}
-          <div class="repo"
-               data-language="{{ repo.language or '' }}"
-               data-stars="{{ repo.stargazers_count }}">
+          <div class="repo" data-lang="{{ repo.language }}" data-stars="{{ repo.stargazers_count }}">
             <h3><a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a></h3>
-            <p>{{ repo.description or "No description." }}</p>
+            <p>{{ repo.description or "No description provided." }}</p>
             <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or "N/A" }}</p>
             <p>🕒 Updated: {{ repo.updated_at[:10] }}</p>
           </div>
         {% endfor %}
       </div>
-    {% elif not error %}
-      <p style="text-align: center; margin-top: 2rem;">No repositories found.</p>
+    {% else %}
+      {% if not error %}
+        <p style="text-align: center; margin-top: 2rem;">No repositories to display.</p>
+      {% endif %}
     {% endif %}
   </div>
-
-  <script>
-    const languageSelect = document.getElementById('language');
-    const starsInput = document.getElementById('stars');
-    const repos = document.querySelectorAll('.repo');
-    const repoCount = document.getElementById('repo-count');
-
-    function filterRepos() {
-      const lang = languageSelect.value;
-      const stars = parseInt(starsInput.value) || 0;
-      let shown = 0;
-
-      repos.forEach(repo => {
-        const repoLang = repo.getAttribute('data-language');
-        const repoStars = parseInt(repo.getAttribute('data-stars'));
-
-        const visible = (!lang || repoLang === lang) && repoStars >= stars;
-        repo.style.display = visible ? 'block' : 'none';
-        if (visible) shown++;
-      });
-
-      repoCount.textContent = `Showing ${shown} repositories`;
-    }
-
-    languageSelect.addEventListener('change', filterRepos);
-    starsInput.addEventListener('input', filterRepos);
-  </script>
 </body>
 </html>
