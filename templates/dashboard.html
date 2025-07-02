@@ -177,7 +177,15 @@
         <p class="meta">📍 {{ user.location or "Unknown" }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
         <div class="stats">
           📦 Public Repos: <strong>{{ user.public_repos }}</strong>
-          {% if user.total_private_repos is defined %}
+          {# Calculate private repos from the 'repos' list if user is logged in and viewing their own profile #}
+          {% if session.oauth_token and not request.args.get('username') %}
+            {% set private_repo_count = 0 %}
+            {% for repo in repos %}
+              {% if repo.private %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
+            {% endfor %}
+            • 🔒 Private Repos: <strong>{{ private_repo_count }}</strong>
+          {% elif user.total_private_repos is defined %}
+            {# Fallback to user.total_private_repos if available and not viewing own profile #}
             • 🔒 Private Repos: <strong>{{ user.total_private_repos }}</strong>
           {% endif %}
         </div>
