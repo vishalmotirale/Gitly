@@ -130,26 +130,39 @@
       font-size: 0.75rem;
       font-weight: bold;
     }
+    /* Debugging style */
+    .debug-info {
+        background-color: #333;
+        color: #fff;
+        padding: 5px;
+        margin-top: 5px;
+        font-size: 0.8em;
+        border-radius: 3px;
+    }
   </style>
   <script>
+    let originalRepos = []; // Store the original, unfiltered list of repo elements
+
     document.addEventListener('DOMContentLoaded', function() {
+      const reposContainer = document.querySelector('.repos');
+      originalRepos = Array.from(reposContainer.children); // Populate originalRepos on load
       filterAndSortRepos(); // Apply filters and sort on page load
     });
 
     function filterAndSortRepos() {
       const langFilter = document.getElementById("langFilter");
       const starFilter = document.getElementById("starFilter");
-      const visibilityFilter = document.getElementById("visibilityFilter"); // New filter
+      const visibilityFilter = document.getElementById("visibilityFilter");
 
       const selectedLang = langFilter.value.toLowerCase();
-      const selectedStarsOrder = starFilter.value; // "asc" or "desc"
-      const selectedVisibility = visibilityFilter.value; // "all", "public", "private"
+      const selectedStarsOrder = starFilter.value;
+      const selectedVisibility = visibilityFilter.value;
 
-      const reposContainer = document.querySelector('.repos');
-      const allRepos = Array.from(reposContainer.children); // Get all repo elements
+      // Start with the original, complete list of repos
+      let currentRepos = [...originalRepos]; 
 
       // 1. Filter
-      const filteredRepos = allRepos.filter(repo => {
+      const filteredRepos = currentRepos.filter(repo => {
         const repoLang = repo.getAttribute("data-lang")?.toLowerCase() || "";
         const isPrivate = repo.getAttribute("data-private") === "true"; // Get private status
 
@@ -171,21 +184,22 @@
         const starsB = parseInt(b.getAttribute("data-stars")) || 0;
 
         if (selectedStarsOrder === "asc") {
-          return starsA - starsB; // Ascending order
+          return starsA - starsB;
         } else if (selectedStarsOrder === "desc") {
-          return starsB - starsA; // Descending order
+          return starsB - starsA;
         }
-        return 0; // No sorting if "All Stars" is selected
+        return 0;
       });
 
       // 3. Re-render (clear and append sorted/filtered repos)
+      const reposContainer = document.querySelector('.repos');
       reposContainer.innerHTML = ''; // Clear current repos
       filteredRepos.forEach(repo => {
         reposContainer.appendChild(repo);
       });
 
-      // Show/hide based on filter results
-      allRepos.forEach(repo => {
+      // Ensure all original repos are made visible before filtering, then hide non-matches
+      originalRepos.forEach(repo => {
         if (filteredRepos.includes(repo)) {
           repo.style.display = "block";
         } else {
@@ -215,8 +229,10 @@
           {% if session.oauth_token and not request.args.get('username') %}
             {% set private_repo_count = 0 %}
             {% for repo in repos %}
-              {# The 'private' attribute is now guaranteed to be a boolean from app.py #}
-              {% if repo.private %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
+              {# DEBUGGING: Print the value of repo.private for each repo #}
+              {# Uncomment the line below to debug the 'private' attribute value and type #}
+              {# <div class="debug-info">Repo: {{ repo.name }}, Private: {{ repo.private|default('N/A') }} (Type: {{ repo.private.__class__.__name__ }})</div> #}
+              {% if repo.private == true %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
             {% endfor %}
             • 🔒 Private Repos: <strong>{{ private_repo_count }}</strong>
           {% elif user.total_private_repos is defined %}
