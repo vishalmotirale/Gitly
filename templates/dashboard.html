@@ -130,42 +130,67 @@
       font-size: 0.75rem;
       font-weight: bold;
     }
-    /* Debugging style */
-    .debug-info {
-        background-color: #333;
-        color: #fff;
-        padding: 5px;
-        margin-top: 5px;
-        font-size: 0.8em;
-        border-radius: 3px;
-    }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      filterRepos(); // Apply filters on page load
+      filterAndSortRepos(); // Apply filters and sort on page load
     });
 
-    function filterRepos() {
+    function filterAndSortRepos() {
       const langFilter = document.getElementById("langFilter");
       const starFilter = document.getElementById("starFilter");
+      const visibilityFilter = document.getElementById("visibilityFilter"); // New filter
 
       const selectedLang = langFilter.value.toLowerCase();
-      const selectedStars = starFilter.value;
+      const selectedStarsOrder = starFilter.value; // "asc" or "desc"
+      const selectedVisibility = visibilityFilter.value; // "all", "public", "private"
 
-      document.querySelectorAll('.repo').forEach(repo => {
+      const reposContainer = document.querySelector('.repos');
+      const allRepos = Array.from(reposContainer.children); // Get all repo elements
+
+      // 1. Filter
+      const filteredRepos = allRepos.filter(repo => {
         const repoLang = repo.getAttribute("data-lang")?.toLowerCase() || "";
-        const repoStars = parseInt(repo.getAttribute("data-stars")) || 0;
+        const isPrivate = repo.getAttribute("data-private") === "true"; // Get private status
 
         const matchesLang = (selectedLang === "" || repoLang === selectedLang);
-        const matchesStars = (selectedStars === "" || (
-          selectedStars === "1" ? repoStars < 10 :
-          selectedStars === "2" ? repoStars < 100 :
-          selectedStars === "3" ? repoStars < 500 :
-          selectedStars === "4" ? repoStars < 1000 :
-          selectedStars === "5" ? repoStars >= 1000 : true
-        ));
         
-        repo.style.display = (matchesLang && matchesStars) ? "block" : "none";
+        let matchesVisibility = true;
+        if (selectedVisibility === "public") {
+          matchesVisibility = !isPrivate;
+        } else if (selectedVisibility === "private") {
+          matchesVisibility = isPrivate;
+        }
+        
+        return matchesLang && matchesVisibility;
+      });
+
+      // 2. Sort
+      filteredRepos.sort((a, b) => {
+        const starsA = parseInt(a.getAttribute("data-stars")) || 0;
+        const starsB = parseInt(b.getAttribute("data-stars")) || 0;
+
+        if (selectedStarsOrder === "asc") {
+          return starsA - starsB; // Ascending order
+        } else if (selectedStarsOrder === "desc") {
+          return starsB - starsA; // Descending order
+        }
+        return 0; // No sorting if "All Stars" is selected
+      });
+
+      // 3. Re-render (clear and append sorted/filtered repos)
+      reposContainer.innerHTML = ''; // Clear current repos
+      filteredRepos.forEach(repo => {
+        reposContainer.appendChild(repo);
+      });
+
+      // Show/hide based on filter results
+      allRepos.forEach(repo => {
+        if (filteredRepos.includes(repo)) {
+          repo.style.display = "block";
+        } else {
+          repo.style.display = "none";
+        }
       });
     }
   </script>
@@ -190,9 +215,8 @@
           {% if session.oauth_token and not request.args.get('username') %}
             {% set private_repo_count = 0 %}
             {% for repo in repos %}
-              {# DEBUGGING: Print the value of repo.private for each repo #}
-              {# <div class="debug-info">Repo: {{ repo.name }}, Private: {{ repo.private|default('N/A') }} (Type: {{ repo.private.__class__.__name__ }})</div> #}
-              {% if repo.private is true %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
+              {# The 'private' attribute is now guaranteed to be a boolean from app.py #}
+              {% if repo.private %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
             {% endfor %}
             • 🔒 Private Repos: <strong>{{ private_repo_count }}</strong>
           {% elif user.total_private_repos is defined %}
@@ -212,7 +236,7 @@
 
     {% if repos %}
       <div class="filters">
-        <select id="langFilter" onchange="filterRepos()">
+        <select id="langFilter" onchange="filterAndSortRepos()">
           <option value="">All Languages</option>
           {# Collect unique languages from all repos #}
           {% set all_languages = [] %}
@@ -225,19 +249,26 @@
           {% endfor %}
         </select>
 
-        <select id="starFilter" onchange="filterRepos()">
+        <select id="starFilter" onchange="filterAndSortRepos()">
           <option value="">All Stars</option>
-          <option value="1">⭐ Less than 10</option>
-          <option value="2">⭐ Less than 100</option>
-          <option value="3">⭐ Less than 500</option>
-          <option value="4">⭐ Less than 1000</option>
-          <option value="5">⭐ 1000 or more</option>
+          <option value="asc">↑ Ascending</option>
+          <option value="desc">↓ Descending</option>
+        </select>
+
+        {# New filter for Public/Private repos #}
+        <select id="visibilityFilter" onchange="filterAndSortRepos()">
+          <option value="all">All Repositories</option>
+          <option value="public">Public Repositories</option>
+          <option value="private">Private Repositories</option>
         </select>
       </div>
 
       <div class="repos">
         {% for repo in repos %}
-          <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}">
+          <div class="repo" 
+               data-lang="{{ repo.language or '' }}" 
+               data-stars="{{ repo.stargazers_count or 0 }}"
+               data-private="{{ 'true' if repo.private else 'false' }}"> {# Pass private status as string #}
             <h3>
               <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
               {% if repo.private %}
