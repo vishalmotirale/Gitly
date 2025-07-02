@@ -55,7 +55,8 @@ def login():
     Initiates the GitHub OAuth login flow.
     Redirects the user to GitHub's authorization page.
     """
-    github = OAuth2Session(client_id, scope=["repo"]) # 'repo' scope includes private repos
+    # The 'repo' scope grants full control of private repositories for the authenticated user.
+    github = OAuth2Session(client_id, scope=["repo"])
     auth_url, state = github.authorization_url(AUTH_URL)
     session['oauth_state'] = state
     return redirect(auth_url)
