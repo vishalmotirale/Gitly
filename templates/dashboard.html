@@ -40,6 +40,11 @@
       font-size: 0.9rem;
       color: #8b949e;
     }
+    .stats {
+      margin-top: 1rem; /* Added margin for spacing */
+      font-size: 1rem;
+      color: #8b949e;
+    }
     .stats strong {
       color: #c9d1d9;
     }
@@ -57,6 +62,7 @@
       cursor: pointer;
       border: 1px solid #30363d;
       box-shadow: 0 0 0 0 transparent;
+      position: relative; /* For private badge positioning */
     }
     .repo:hover {
       border-color: #58a6ff;
@@ -85,6 +91,11 @@
       border: 1px solid #30363d;
       color: #c9d1d9;
       border-radius: 6px;
+      appearance: none; /* Remove default arrow */
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23c9d1d9%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-24.8%200L146.2%20186.1%2030.3%2069.4a17.6%2017.6%200%200%200-24.8%2024.8l130.4%20130.5c6.8%206.8%2017.9%206.8%2024.7%200l130.4-130.5c6.9-6.8%206.9-17.9%200-24.7z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 0.7em top 50%, 0 0;
+      background-size: 0.65em auto, 100%;
     }
     .nav {
       text-align: center;
@@ -94,28 +105,57 @@
       margin: 0 10px;
       color: #58a6ff;
       text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    .nav a:hover {
+      color: #79c0ff;
     }
     .error {
       text-align: center;
       padding: 20px;
       color: #ff7b72;
+      background-color: #2b1a1a;
+      border: 1px solid #ff7b72;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+    .private-badge {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background-color: #6a0000; /* Darker red for private */
+      color: #ff7b72;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
     }
   </style>
   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      filterRepos(); // Apply filters on page load
+    });
+
     function filterRepos() {
-      const lang = document.getElementById("langFilter").value.toLowerCase();
-      const stars = document.getElementById("starFilter").value;
+      const langFilter = document.getElementById("langFilter");
+      const starFilter = document.getElementById("starFilter");
+
+      const selectedLang = langFilter.value.toLowerCase();
+      const selectedStars = starFilter.value;
+
       document.querySelectorAll('.repo').forEach(repo => {
         const repoLang = repo.getAttribute("data-lang")?.toLowerCase() || "";
         const repoStars = parseInt(repo.getAttribute("data-stars")) || 0;
-        const matchesLang = !lang || repoLang === lang;
-        const matchesStars = !stars || (
-          stars === "1" ? repoStars < 10 :
-          stars === "2" ? repoStars < 100 :
-          stars === "3" ? repoStars < 500 :
-          stars === "4" ? repoStars < 1000 :
-          stars === "5" ? repoStars >= 1000 : true
-        );
+
+        const matchesLang = (selectedLang === "" || repoLang === selectedLang);
+        const matchesStars = (selectedStars === "" || (
+          selectedStars === "1" ? repoStars < 10 :
+          selectedStars === "2" ? repoStars < 100 :
+          selectedStars === "3" ? repoStars < 500 :
+          selectedStars === "4" ? repoStars < 1000 :
+          selectedStars === "5" ? repoStars >= 1000 : true
+        ));
+        
         repo.style.display = (matchesLang && matchesStars) ? "block" : "none";
       });
     }
@@ -155,7 +195,13 @@
       <div class="filters">
         <select id="langFilter" onchange="filterRepos()">
           <option value="">All Languages</option>
-          {% for lang in repos|map(attribute='language')|select|string|unique %}
+          {# Collect unique languages from all repos #}
+          {% set all_languages = [] %}
+          {% for repo in repos %}
+            {% if repo.language %}{% set _ = all_languages.append(repo.language) %}{% endif %}
+          {% endfor %}
+          {# Sort unique languages and render options #}
+          {% for lang in all_languages|unique|sort %}
             <option value="{{ lang }}">{{ lang }}</option>
           {% endfor %}
         </select>
@@ -172,8 +218,13 @@
 
       <div class="repos">
         {% for repo in repos %}
-          <div class="repo" data-lang="{{ repo.language }}" data-stars="{{ repo.stargazers_count }}">
-            <h3><a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a></h3>
+          <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}">
+            <h3>
+              <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
+              {% if repo.private %}
+                <span class="private-badge">Private</span>
+              {% endif %}
+            </h3>
             <p>{{ repo.description or "No description provided." }}</p>
             <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or "N/A" }}</p>
             <p>🕒 Updated: {{ repo.updated_at[:10] }}</p>
