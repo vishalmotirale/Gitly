@@ -130,6 +130,15 @@
       font-size: 0.75rem;
       font-weight: bold;
     }
+    /* Debugging style */
+    .debug-info {
+        background-color: #333;
+        color: #fff;
+        padding: 5px;
+        margin-top: 5px;
+        font-size: 0.8em;
+        border-radius: 3px;
+    }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -181,7 +190,9 @@
           {% if session.oauth_token and not request.args.get('username') %}
             {% set private_repo_count = 0 %}
             {% for repo in repos %}
-              {% if repo.private %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
+              {# DEBUGGING: Print the value of repo.private for each repo #}
+              {# <div class="debug-info">Repo: {{ repo.name }}, Private: {{ repo.private|default('N/A') }} (Type: {{ repo.private.__class__.__name__ }})</div> #}
+              {% if repo.private is true %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
             {% endfor %}
             • 🔒 Private Repos: <strong>{{ private_repo_count }}</strong>
           {% elif user.total_private_repos is defined %}
