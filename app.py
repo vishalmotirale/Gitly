@@ -109,24 +109,24 @@ def dashboard():
         try:
             if not username: # Logged-in user viewing their OWN repositories
                 user_response = github.get(USER_API)
-                # --- DEBUGGING: Print API response for user data ---
                 print(f"DEBUG: User API Status: {user_response.status_code}")
-                print(f"DEBUG: User API Response: {user_response.text[:500]}...") # Print first 500 chars
-                user_response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+                print(f"DEBUG: User API Response: {user_response.text[:500]}...")
+                user_response.raise_for_status()
                 user_data = user_response.json()
 
                 page = 1
                 while True:
-                    # Explicitly request all types of repositories (public, private, forks, sources)
-                    # This is crucial for ensuring private repos are included.
                     repo_response = github.get(REPO_API, params={"per_page": 100, "page": page, "type": "all"})
-                    # --- DEBUGGING: Print API response for repos data ---
                     print(f"DEBUG: Repo API Status (page {page}): {repo_response.status_code}")
-                    print(f"DEBUG: Repo API Response (page {page}): {repo_response.text[:500]}...") # Print first 500 chars
+                    print(f"DEBUG: Repo API Response (page {page}): {repo_response.text[:500]}...")
                     repo_response.raise_for_status()
                     data = repo_response.json()
                     if not data:
                         break
+                    
+                    # Explicitly convert 'private' field to boolean for consistency
+                    for repo in data:
+                        repo['private'] = bool(repo.get('private', False)) # Default to False if missing
                     all_repos.extend(data)
                     page += 1
                 
@@ -149,13 +149,15 @@ def dashboard():
                         data = r.json()
                         if not data:
                             break
+                        # Explicitly convert 'private' field to boolean for consistency (even for public repos)
+                        for repo in data:
+                            repo['private'] = bool(repo.get('private', False))
                         all_repos.extend(data)
                         page += 1
                     
         except requests.exceptions.RequestException as e:
-            # This catch block will now receive more context from the print statements above
             print(f"ERROR: GitHub API request error (authenticated path): {e}")
-            error_message = "Failed to communicate with GitHub API. Please try again."
+            error_message = "Failed to communicate with GitHub API. Please check your internet connection or try again later."
         except Exception as e:
             print(f"ERROR: An unexpected error occurred in dashboard (authenticated path): {e}")
             error_message = "An unexpected error occurred. Please try again."
@@ -187,10 +189,12 @@ def dashboard():
                 data = r_resp.json()
                 if not data:
                     break
+                # Explicitly convert 'private' field to boolean for consistency
+                for repo in data:
+                    repo['private'] = bool(repo.get('private', False))
                 all_repos.extend(data)
                 page += 1
             
-    # The dashboard.html now handles filtering via JavaScript
     return render_template(
         'dashboard.html', 
         user=user_data, 
