@@ -41,7 +41,7 @@
       color: #8b949e;
     }
     .stats {
-      margin-top: 1rem; /* Added margin for spacing */
+      margin-top: 1rem;
       font-size: 1rem;
       color: #8b949e;
     }
@@ -62,7 +62,7 @@
       cursor: pointer;
       border: 1px solid #30363d;
       box-shadow: 0 0 0 0 transparent;
-      position: relative; /* For private badge positioning */
+      position: relative;
     }
     .repo:hover {
       border-color: #58a6ff;
@@ -91,11 +91,7 @@
       border: 1px solid #30363d;
       color: #c9d1d9;
       border-radius: 6px;
-      appearance: none; /* Remove default arrow */
-      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23c9d1d9%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-24.8%200L146.2%20186.1%2030.3%2069.4a17.6%2017.6%200%200%200-24.8%2024.8l130.4%20130.5c6.8%206.8%2017.9%206.8%2024.7%200l130.4-130.5c6.9-6.8%206.9-17.9%200-24.7z%22%2F%3E%3C%2Fsvg%3E');
-      background-repeat: no-repeat;
-      background-position: right 0.7em top 50%, 0 0;
-      background-size: 0.65em auto, 100%;
+      appearance: none;
     }
     .nav {
       text-align: center;
@@ -123,89 +119,50 @@
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
-      background-color: #6a0000; /* Darker red for private */
+      background-color: #6a0000;
       color: #ff7b72;
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: bold;
     }
-    /* Debugging style */
-    .debug-info {
-        background-color: #333;
-        color: #fff;
-        padding: 5px;
-        margin-top: 5px;
-        font-size: 0.8em;
-        border-radius: 3px;
-    }
   </style>
   <script>
-    let originalRepos = []; // Store the original, unfiltered list of repo elements
+    let originalRepos = [];
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const reposContainer = document.querySelector('.repos');
-      originalRepos = Array.from(reposContainer.children); // Populate originalRepos on load
-      filterAndSortRepos(); // Apply filters and sort on page load
+      originalRepos = Array.from(reposContainer.children);
+      filterAndSortRepos();
     });
 
     function filterAndSortRepos() {
-      const langFilter = document.getElementById("langFilter");
-      const starFilter = document.getElementById("starFilter");
-      const visibilityFilter = document.getElementById("visibilityFilter");
+      const lang = document.getElementById("langFilter").value.toLowerCase();
+      const stars = document.getElementById("starFilter").value;
+      const visibility = document.getElementById("visibilityFilter").value;
 
-      const selectedLang = langFilter.value.toLowerCase();
-      const selectedStarsOrder = starFilter.value;
-      const selectedVisibility = visibilityFilter.value;
+      let filtered = originalRepos.filter(repo => {
+        const langAttr = repo.getAttribute("data-lang").toLowerCase() || "";
+        const isPrivate = repo.getAttribute("data-private") === "true";
 
-      // Start with the original, complete list of repos
-      let currentRepos = [...originalRepos]; 
+        const matchLang = !lang || lang === langAttr;
+        const matchVisibility = visibility === "all" ||
+                                (visibility === "public" && !isPrivate) ||
+                                (visibility === "private" && isPrivate);
 
-      // 1. Filter
-      const filteredRepos = currentRepos.filter(repo => {
-        const repoLang = repo.getAttribute("data-lang")?.toLowerCase() || "";
-        const isPrivate = repo.getAttribute("data-private") === "true"; // Get private status
-
-        const matchesLang = (selectedLang === "" || repoLang === selectedLang);
-        
-        let matchesVisibility = true;
-        if (selectedVisibility === "public") {
-          matchesVisibility = !isPrivate;
-        } else if (selectedVisibility === "private") {
-          matchesVisibility = isPrivate;
-        }
-        
-        return matchesLang && matchesVisibility;
+        return matchLang && matchVisibility;
       });
 
-      // 2. Sort
-      filteredRepos.sort((a, b) => {
+      filtered.sort((a, b) => {
         const starsA = parseInt(a.getAttribute("data-stars")) || 0;
         const starsB = parseInt(b.getAttribute("data-stars")) || 0;
-
-        if (selectedStarsOrder === "asc") {
-          return starsA - starsB;
-        } else if (selectedStarsOrder === "desc") {
-          return starsB - starsA;
-        }
-        return 0;
+        return stars === "asc" ? starsA - starsB :
+               stars === "desc" ? starsB - starsA : 0;
       });
 
-      // 3. Re-render (clear and append sorted/filtered repos)
-      const reposContainer = document.querySelector('.repos');
-      reposContainer.innerHTML = ''; // Clear current repos
-      filteredRepos.forEach(repo => {
-        reposContainer.appendChild(repo);
-      });
-
-      // Ensure all original repos are made visible before filtering, then hide non-matches
-      originalRepos.forEach(repo => {
-        if (filteredRepos.includes(repo)) {
-          repo.style.display = "block";
-        } else {
-          repo.style.display = "none";
-        }
-      });
+      const container = document.querySelector('.repos');
+      container.innerHTML = '';
+      filtered.forEach(repo => container.appendChild(repo));
     }
   </script>
 </head>
@@ -224,21 +181,14 @@
         <p class="bio">{{ user.bio or "No bio available." }}</p>
         <p class="meta">📍 {{ user.location or "Unknown" }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
         <div class="stats">
-          📦 Public Repos: <strong>{{ user.public_repos }}</strong>
-          {# Calculate private repos from the 'repos' list if user is logged in and viewing their own profile #}
-          {% if session.oauth_token and not request.args.get('username') %}
-            {% set private_repo_count = 0 %}
-            {% for repo in repos %}
-              {# DEBUGGING: Print the value of repo.private for each repo #}
-              {# Uncomment the line below to debug the 'private' attribute value and type #}
-              {# <div class="debug-info">Repo: {{ repo.name }}, Private: {{ repo.private|default('N/A') }} (Type: {{ repo.private.__class__.__name__ }})</div> #}
-              {% if repo.private == true %}{% set private_repo_count = private_repo_count + 1 %}{% endif %}
-            {% endfor %}
-            • 🔒 Private Repos: <strong>{{ private_repo_count }}</strong>
-          {% elif user.total_private_repos is defined %}
-            {# Fallback to user.total_private_repos if available and not viewing own profile #}
-            • 🔒 Private Repos: <strong>{{ user.total_private_repos }}</strong>
-          {% endif %}
+          📦 Total Repos:
+          <strong>
+            {% if session.oauth_token and not request.args.get('username') %}
+              {{ repos | length }}
+            {% else %}
+              {{ user.public_repos }}
+            {% endif %}
+          </strong>
         </div>
         <div class="nav">
           🔗 <a href="{{ user.html_url }}" target="_blank">GitHub Profile</a>
@@ -254,13 +204,11 @@
       <div class="filters">
         <select id="langFilter" onchange="filterAndSortRepos()">
           <option value="">All Languages</option>
-          {# Collect unique languages from all repos #}
-          {% set all_languages = [] %}
+          {% set langs = [] %}
           {% for repo in repos %}
-            {% if repo.language %}{% set _ = all_languages.append(repo.language) %}{% endif %}
+            {% if repo.language %}{% set _ = langs.append(repo.language) %}{% endif %}
           {% endfor %}
-          {# Sort unique languages and render options #}
-          {% for lang in all_languages|unique|sort %}
+          {% for lang in langs|unique|sort %}
             <option value="{{ lang }}">{{ lang }}</option>
           {% endfor %}
         </select>
@@ -271,20 +219,19 @@
           <option value="desc">↓ Descending</option>
         </select>
 
-        {# New filter for Public/Private repos #}
         <select id="visibilityFilter" onchange="filterAndSortRepos()">
           <option value="all">All Repositories</option>
-          <option value="public">Public Repositories</option>
-          <option value="private">Private Repositories</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
         </select>
       </div>
 
       <div class="repos">
         {% for repo in repos %}
-          <div class="repo" 
-               data-lang="{{ repo.language or '' }}" 
+          <div class="repo"
+               data-lang="{{ repo.language or '' }}"
                data-stars="{{ repo.stargazers_count or 0 }}"
-               data-private="{{ 'true' if repo.private else 'false' }}"> {# Pass private status as string #}
+               data-private="{{ 'true' if repo.private else 'false' }}">
             <h3>
               <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
               {% if repo.private %}
