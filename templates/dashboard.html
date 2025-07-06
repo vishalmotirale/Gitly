@@ -81,16 +81,10 @@
       border-radius: 6px;
       font-size: 0.9rem;
     }
+
     .filters button {
       cursor: pointer;
       transition: background 0.3s;
-    }
-    #applyFilters {
-      background-color: #238636;
-      color: white;
-    }
-    #applyFilters:hover {
-      background-color: #2ea043;
     }
 
     .repos {
@@ -201,12 +195,21 @@
     document.addEventListener("DOMContentLoaded", () => {
       originalRepos = Array.from(document.querySelectorAll(".repo"));
       restoreFilters();
+      applyEventListeners();
+      filterRepos(); // Run once on page load
+
       document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 
-      // Apply stored theme
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') toggleTheme();
     });
+
+    function applyEventListeners() {
+      document.getElementById("langFilter").addEventListener("change", filterRepos);
+      document.getElementById("starFilter").addEventListener("change", filterRepos);
+      document.getElementById("visibilityFilter").addEventListener("change", filterRepos);
+      document.getElementById("searchInput").addEventListener("input", filterRepos);
+    }
 
     function restoreFilters() {
       document.getElementById("langFilter").value = localStorage.getItem("lang") || "";
