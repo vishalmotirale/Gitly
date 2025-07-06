@@ -86,12 +86,26 @@
       margin-bottom: 1.5rem;
     }
     .filters select {
-      padding: 8px 12px;
+      /* Adjusted padding-right for more space before the arrow */
+      padding: 8px 30px 8px 12px; /* Top, Right, Bottom, Left */
       background-color: #161b22;
       border: 1px solid #30363d;
       color: #c9d1d9;
       border-radius: 6px;
       appearance: none;
+      /* Adjusted width for better fit based on content */
+      width: auto; /* Allow width to be determined by content */
+      min-width: max-content; /* Ensure it's at least as wide as its content */
+      /* Adjusted background-position to move the arrow further right */
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23c9d1d9%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-24.8%200L146.2%20186.1%2030.3%2069.4a17.6%2017.6%200%200%200-24.8%2024.8l130.4%20130.5c6.8%206.8%2017.9%206.8%2024.7%200l130.4-130.5c6.9-6.8%206.9-17.9%200-24.7z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 1em top 50%, 0 0; /* Changed 0.7em to 1em */
+      background-size: 0.65em auto, 100%;
+    }
+    /* Specific style for the "All Stars" dropdown to fit content */
+    #starFilter {
+      width: auto; /* Allow width to be determined by content */
+      min-width: 120px; /* Set a minimum width to ensure readability of "All Stars" */
     }
     .nav {
       text-align: center;
@@ -125,6 +139,38 @@
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: bold;
+    }
+    /* Styles for Flash Messages - NEW */
+    .flash-message-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem; /* Space below the message container */
+    }
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-align: center;
+      width: 100%;
+      max-width: 500px; /* Adjust as needed */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .flash-message.error {
+      background-color: #2b1a1a;
+      color: #ff7b72;
+      border: 1px solid #ff7b72;
+    }
+    .flash-message.success {
+      background-color: #1a2b1a;
+      color: #238636;
+      border: 1px solid #238636;
+    }
+    .flash-message.info {
+      background-color: #1a202b;
+      color: #58a6ff;
+      border: 1px solid #58a6ff;
     }
   </style>
   <script>
@@ -168,6 +214,19 @@
 </head>
 <body>
   <div class="container">
+    {# Flash Messages Display - NEW #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages-container">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     {% if error %}
       <div class="error">
         <h2>⚠️ {{ error }}</h2>
