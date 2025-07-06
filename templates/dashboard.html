@@ -149,7 +149,11 @@
       <p class="bio">{{ user.bio or 'No bio available' }}</p>
       <p class="meta">📍 {{ user.location or 'Unknown' }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
       <div class="stats">
+        {% if is_authenticated and not request.args.get('username') %}
+        📦 Total Repositories: <strong>{{ user.total_repos }}</strong><br>
+        {% else %}
         📦 Total Public Repositories: <strong>{{ user.public_repos }}</strong><br>
+        {% endif %}
         🔗 <a href="{{ user.html_url }}" target="_blank" style="color: var(--link-color); text-decoration: none">Visit GitHub Profile →</a>
       </div>
     </div>
@@ -175,7 +179,6 @@
         <option value="public">Public</option>
         <option value="private">Private</option>
       </select>
-      <button id="applyFilters">Apply</button>
       <button id="exportCSV">Export CSV</button>
     </div>
 
@@ -198,7 +201,6 @@
     document.addEventListener("DOMContentLoaded", () => {
       originalRepos = Array.from(document.querySelectorAll(".repo"));
       restoreFilters();
-      document.getElementById("applyFilters").addEventListener("click", filterRepos);
       document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 
       // Apply stored theme
