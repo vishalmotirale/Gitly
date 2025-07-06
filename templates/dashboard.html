@@ -20,13 +20,19 @@
       margin: 0;
       padding: 0;
     }
-    .theme-toggle {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
+    .container {
+      max-width: 960px;
+      margin: auto;
+      padding: 2rem;
     }
-    .theme-toggle button {
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .theme-toggle button,
+    .logout-btn {
       background-color: transparent;
       color: var(--link-color);
       border: 1px solid var(--link-color);
@@ -34,12 +40,14 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 0.9rem;
+      transition: background-color 0.3s;
+      text-decoration: none;
     }
-    .container {
-      max-width: 960px;
-      margin: auto;
-      padding: 2rem;
+    .theme-toggle button:hover,
+    .logout-btn:hover {
+      background-color: var(--hover-bg);
     }
+
     .profile {
       text-align: center;
       margin-bottom: 2rem;
@@ -57,6 +65,7 @@
     .bio, .meta, .stats {
       color: var(--text-color);
     }
+
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -83,6 +92,7 @@
     #applyFilters:hover {
       background-color: #2ea043;
     }
+
     .repos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -94,7 +104,6 @@
       padding: 1rem;
       border-radius: 8px;
       border: 1px solid var(--border-color);
-      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
       transition: all 0.3s ease;
       cursor: pointer;
     }
@@ -124,12 +133,16 @@
   </style>
 </head>
 <body>
-  <!-- Top-right Theme Toggle -->
-  <div class="theme-toggle">
-    <button onclick="toggleTheme()">🌗 Switch Theme</button>
-  </div>
-
   <div class="container">
+    <!-- Top Right Actions -->
+    <div class="top-actions">
+      <div class="theme-toggle">
+        <button onclick="toggleTheme()">🌗 Switch Theme</button>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Profile Section -->
     <div class="profile">
       <img src="{{ user.avatar_url }}" alt="User Avatar">
       <h1>{{ user.name or user.login }}</h1>
@@ -141,6 +154,7 @@
       </div>
     </div>
 
+    <!-- Filters -->
     <div class="filters">
       <input type="text" id="searchInput" placeholder="Search repositories...">
       <select id="langFilter">
@@ -157,7 +171,7 @@
         <option value="desc">Stars ↓</option>
       </select>
       <select id="visibilityFilter">
-        <option value="all">All</option>
+        <option value="all">All Repositories</option>
         <option value="public">Public</option>
         <option value="private">Private</option>
       </select>
@@ -165,6 +179,7 @@
       <button id="exportCSV">Export CSV</button>
     </div>
 
+    <!-- Repo Cards -->
     <div class="repos">
       {% for repo in repos %}
         <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}">
@@ -186,7 +201,7 @@
       document.getElementById("applyFilters").addEventListener("click", filterRepos);
       document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 
-      // Restore theme from local storage
+      // Apply stored theme
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') toggleTheme();
     });

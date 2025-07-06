@@ -1,57 +1,41 @@
 import os
 import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash # Import flash for user messages
+from requests_oauthlib.oauth2_session import OAuth2Session 
+from flask import Flask, render_template, request, redirect, url_for, session, flash # Ensure flash is imported
 from dotenv import load_dotenv
 from oauthlib.oauth2 import MismatchingStateError
 
-# Load environment variables from repos.env (for local development)
 load_dotenv('repos.env')
 
-# IMPORTANT: This line is for local development with HTTP.
-# For production, ensure HTTPS is used and remove this line or set to '0'.
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
-# Flask secret key for session management, loaded from environment variables
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-# GitHub OAuth credentials
 client_id = os.getenv("GITHUB_CLIENT_ID")
 client_secret = os.getenv("GITHUB_CLIENT_SECRET")
 
-# NEW FIX: Get the server-side PAT from environment variables using the CORRECT name
-# This token will be used for unauthenticated (public) API requests
-# It's crucial this is set on Render as an environment variable
-github_pat = os.getenv('GITHUB_APP_TOKEN') # <--- CHANGED THIS LINE FROM "GITHUB_PAT" TO "GITHUB_APP_TOKEN"
+github_pat = os.getenv('GITHUB_APP_TOKEN') # Correctly looking for GITHUB_APP_TOKEN
 
-# Base URL for GitHub API
 GITHUB_API_BASE_URL = 'https://api.github.com'
+AUTH_URL = 'https://github.com/login/oauth/authorize'
 
-# Ensure all necessary environment variables are set
-if not all([app.secret_key, client_id, client_secret]):
-    # Added github_pat to the check to ensure it's loaded for local dev, though Render handles it for deployment
-    if not github_pat and os.getenv('RENDER'): # Only raise if not on Render and PAT is missing
-        raise EnvironmentError("Missing required environment variables. Please check 'repos.env' for FLASK_SECRET_KEY, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_APP_TOKEN.")
-    elif not os.getenv('RENDER') and not all([app.secret_key, client_id, client_secret]):
-        raise EnvironmentError("Missing required environment variables. Please check 'repos.env' for FLASK_SECRET_KEY, GITHUB_CLIENT_ID, and GITHUB_CLIENT_SECRET.")
+if not app.secret_key:
+    raise EnvironmentError("Missing FLASK_SECRET_KEY environment variable.")
+if not client_id:
+    raise EnvironmentError("Missing GITHUB_CLIENT_ID environment variable.")
+if not client_secret:
+    raise EnvironmentError("Missing GITHUB_CLIENT_SECRET environment variable.")
+if not github_pat and not os.getenv('RENDER'): # Only warn/raise if not on Render and PAT is missing
+    print("WARNING: GITHUB_APP_TOKEN not set. Public API requests might hit lower rate limits.")
 
-
-# --- Helper function to print rate limit info ---
 def print_rate_limit_info(response, context=""):
+    """Prints GitHub API rate limit information from response headers."""
     rate_limit_remaining = response.headers.get('X-RateLimit-Remaining')
     rate_limit_reset = response.headers.get('X-RateLimit-Reset')
     print(f"DEBUG: {context} Rate Limit Remaining: {rate_limit_remaining}, Reset: {rate_limit_reset}")
-
-
-# --- Routes ---
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    """
-    Handles the homepage, allowing users to search public repositories
-    or initiate the GitHub OAuth login process.
-    If already logged in, redirects to the dashboard.
-    """
     if 'oauth_token' in session:
         return redirect(url_for('dashboard'))
 
@@ -64,12 +48,6 @@ def index():
 
 @app.route('/login')
 def login():
-    """
-    Initiates the GitHub OAuth login flow.
-    Redirects the user to GitHub's authorization page.
-    """
-    # The 'repo' scope grants full control of private repositories for the authenticated user.
-    # If you only need public repo access for logged-in users, you can change this to ["public_repo"]
     github = OAuth2Session(client_id, scope=["repo"]) 
     auth_url, state = github.authorization_url(AUTH_URL)
     session['oauth_state'] = state
@@ -77,10 +55,6 @@ def login():
 
 @app.route('/callback')
 def callback():
-    """
-    Handles the callback from GitHub after user authorization.
-    Exchanges the authorization code for an access token.
-    """
     try:
         if 'oauth_state' not in session:
             print("OAuth state missing from session.")
@@ -89,7 +63,7 @@ def callback():
 
         github = OAuth2Session(client_id, state=session['oauth_state'])
         token = github.fetch_token(
-            TOKEN_URL,
+            'https://github.com/login/oauth/access_token', # Use direct URL for token exchange
             client_secret=client_secret,
             authorization_response=request.url
         )
@@ -109,24 +83,18 @@ def callback():
     
 @app.route('/dashboard')
 def dashboard():
-    """
-    Displays the user's GitHub repositories or a specific user's public repositories.
-    Handles both authenticated and unauthenticated scenarios. All filtering is now
-    handled client-side by dashboard.html's JavaScript.
-    """
     username = request.args.get('username')
 
     all_repos = []
     user_data = None
     error_message = None
     
-    # --- Authenticated User Logic ---
     if 'oauth_token' in session:
         github = OAuth2Session(client_id, token=session['oauth_token'])
 
         try:
             if not username: # Logged-in user viewing their OWN repositories
-                user_response = github.get(USER_API)
+                user_response = github.get(f"{GITHUB_API_BASE_URL}/user") # Use GITHUB_API_BASE_URL
                 print(f"DEBUG: User API Status (Authenticated): {user_response.status_code}")
                 print_rate_limit_info(user_response, "Authenticated User API")
                 user_response.raise_for_status()
@@ -134,7 +102,7 @@ def dashboard():
 
                 page = 1
                 while True:
-                    repo_response = github.get(REPO_API, params={"per_page": 100, "page": page, "type": "all"})
+                    repo_response = github.get(f"{GITHUB_API_BASE_URL}/user/repos", params={"per_page": 100, "page": page, "type": "all"}) # Use GITHUB_API_BASE_URL
                     print(f"DEBUG: Repo API Status (Authenticated, page {page}): {repo_response.status_code}")
                     print_rate_limit_info(repo_response, f"Authenticated Repo API (page {page})")
                     repo_response.raise_for_status()
@@ -147,8 +115,7 @@ def dashboard():
                     all_repos.extend(data)
                     page += 1
                 
-            else: # Logged-in user viewing ANOTHER user's profile (public repos only)
-                # These requests are still authenticated by the logged-in user's token
+            else: 
                 user_resp = github.get(f"{GITHUB_API_BASE_URL}/users/{username}")
                 print(f"DEBUG: Other User API Status (Authenticated): {user_resp.status_code}")
                 print_rate_limit_info(user_resp, "Authenticated Other User API")
@@ -188,10 +155,9 @@ def dashboard():
 
         # Prepare headers for PAT authentication if PAT is available
         headers = {'Accept': 'application/vnd.github.v3+json'}
-        if github_pat: # <--- NEW: Check if PAT exists (this will now be true if GITHUB_APP_TOKEN is set on Render)
-            headers['Authorization'] = f"token {github_pat}" # <--- NEW: Add Authorization header
+        if github_pat: # Check if PAT exists
+            headers['Authorization'] = f"token {github_pat}" # Add Authorization header
 
-        # Fetch user profile using requests.get with PAT headers
         u_resp = requests.get(f"{GITHUB_API_BASE_URL}/users/{username}", headers=headers)
         print(f"DEBUG: Unauthenticated User API Status: {u_resp.status_code}")
         print_rate_limit_info(u_resp, "Unauthenticated User API")
@@ -199,13 +165,11 @@ def dashboard():
             error_message = "User not found."
             if u_resp.status_code == 403:
                 error_message = "GitHub API rate limit exceeded for public searches. Please try again later or log in."
-            # If user not found, no need to proceed to fetch repos
             return render_template('dashboard.html', user=user_data, repos=all_repos, error=error_message)
         else:
             user_data = u_resp.json()
             page = 1
             while True:
-                # Fetch repositories using requests.get with PAT headers
                 r_resp = requests.get(f"{GITHUB_API_BASE_URL}/users/{username}/repos", params={"per_page": 100, "page": page}, headers=headers)
                 print(f"DEBUG: Unauthenticated Repo API Status (page {page}): {r_resp.status_code}")
                 print_rate_limit_info(r_resp, f"Unauthenticated Repo API (page {page})")
@@ -231,18 +195,12 @@ def dashboard():
 
 @app.route('/logout')
 def logout(): 
-    """
-    Logs out the user by clearing the session.
-    """
     session.clear()
-    flash('You have been logged out.', 'info') # Added flash message
+    flash('You have been logged out.', 'info') # Re-added flash message
     return redirect(url_for('index'))
 
 @app.errorhandler(404)
 def not_found(e): 
-    """
-    Custom error handler for 404 Not Found errors.
-    """
     return render_template("404.html"), 404
 
 if __name__ == "__main__":
