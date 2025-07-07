@@ -62,9 +62,6 @@
       margin: 0.5rem 0;
       color: var(--link-color);
     }
-    .bio, .meta, .stats {
-      color: var(--text-color);
-    }
 
     .filters {
       display: flex;
@@ -100,6 +97,7 @@
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1rem;
     }
+
     .repo {
       background-color: var(--card-bg);
       padding: 1rem;
@@ -130,6 +128,21 @@
       border-radius: 4px;
       font-size: 0.75rem;
       float: right;
+    }
+
+    /* Language bar */
+    .lang-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .lang-segment {
+      height: 100%;
     }
   </style>
 </head>
@@ -196,6 +209,14 @@
           <p>{{ repo.description or 'No description' }}</p>
           <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or 'N/A' }}</p>
           <p>🕓 Last updated: {{ repo.updated_at[:10] }}</p>
+
+          {% if repo.language_percentages %}
+            <div class="lang-bar">
+              {% for lang, percent in repo.language_percentages.items() %}
+                <div class="lang-segment" style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }}" title="{{ lang }}: {{ percent }}%"></div>
+              {% endfor %}
+            </div>
+          {% endif %}
         </div>
       {% endfor %}
     </div>

@@ -34,6 +34,17 @@ def print_rate_limit_info(response, context=""):
     rate_limit_reset = response.headers.get('X-RateLimit-Reset')
     print(f"DEBUG: {context} Rate Limit Remaining: {rate_limit_remaining}, Reset: {rate_limit_reset}")
 
+def get_language_percentages(repo_full_name, headers):
+    url = f"{GITHUB_API_BASE_URL}/repos/{repo_full_name}/languages"
+    resp = requests.get(url, headers=headers)
+    if resp.status_code != 200:
+        return {}
+    data = resp.json()
+    total = sum(data.values())
+    if total == 0:
+        return {}
+    return {lang: round((count / total) * 100, 1) for lang, count in data.items()}
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'oauth_token' in session:
@@ -132,6 +143,7 @@ def dashboard():
                             break
                         for repo in data:
                             repo['private'] = bool(repo.get('private', False))
+                            repo['language_percentages'] = get_language_percentages(repo['full_name'], github.headers if hasattr(github, 'headers') else {})
                         all_repos.extend(data)
                         page += 1
                     
@@ -169,6 +181,7 @@ def dashboard():
                     break
                 for repo in data:
                     repo['private'] = bool(repo.get('private', False))
+                    repo['language_percentages'] = get_language_percentages(repo['full_name'], headers)
                 all_repos.extend(data)
                 page += 1
 
