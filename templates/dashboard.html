@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gitly Dashboard</title>
   <style id="theme-style">
+    /* Theme variables for easy switching */
     :root {
       --bg-color: #0d1117;
       --text-color: #c9d1d9;
@@ -13,12 +14,23 @@
       --card-bg: #161b22;
       --hover-bg: #1c2128;
     }
+    /* Light theme variables (example, can be expanded) */
+    body.light-theme {
+      --bg-color: #ffffff;
+      --text-color: #24292f;
+      --link-color: #0969da;
+      --border-color: #d0d7de;
+      --card-bg: #f6f8fa;
+      --hover-bg: #eaeef2;
+    }
+
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
+      transition: background-color 0.3s, color 0.3s; /* Smooth theme transition */
     }
     .container {
       max-width: 960px;
@@ -40,12 +52,14 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 0.9rem;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
       text-decoration: none;
     }
     .theme-toggle button:hover,
     .logout-btn:hover {
       background-color: var(--hover-bg);
+      border-color: var(--hover-bg); /* Match border to background on hover */
+      color: var(--text-color); /* Adjust text color on hover for contrast */
     }
 
     .profile {
@@ -62,13 +76,28 @@
       margin: 0.5rem 0;
       color: var(--link-color);
     }
+    .profile .bio {
+      font-style: italic;
+      color: var(--text-color);
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+    }
+    .profile .meta {
+      font-size: 0.9em;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+    .profile .stats {
+        margin-top: 0.5rem;
+        font-size: 0.95em;
+    }
 
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.75rem; /* Slightly increased gap for better spacing */
       justify-content: center;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem; /* Increased margin for more separation */
     }
     .filters input, .filters select, .filters button {
       padding: 10px 15px;
@@ -77,16 +106,27 @@
       color: var(--text-color);
       border-radius: 6px;
       font-size: 0.9rem;
+      flex-grow: 1; /* Allow items to grow to fill space */
+      max-width: 250px; /* Max width for filter inputs/selects */
+    }
+    .filters input::placeholder {
+      color: var(--text-color);
+      opacity: 0.7;
     }
 
     .filters button {
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .filters button:hover {
+      background-color: var(--link-color);
+      color: white;
+      border-color: var(--link-color);
     }
 
     #repoCount {
       text-align: center;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       font-weight: bold;
       font-size: 1.1rem;
       color: var(--text-color);
@@ -95,7 +135,7 @@
     .repos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
+      gap: 1.5rem; /* Increased gap between repo cards */
     }
 
     .repo {
@@ -105,21 +145,34 @@
       border: 1px solid var(--border-color);
       transition: all 0.3s ease;
       cursor: pointer;
+      display: flex; /* Use flexbox for internal layout */
+      flex-direction: column;
+      justify-content: space-between; /* Push language bar to bottom */
     }
     .repo:hover {
       border-color: var(--link-color);
       box-shadow: 0 0 12px 2px rgba(88, 166, 255, 0.3);
-      transform: scale(1.02);
+      transform: translateY(-5px); /* Subtle lift effect */
       background-color: var(--hover-bg);
+    }
+    .repo h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
     }
     .repo h3 a {
       color: var(--link-color);
       text-decoration: none;
       font-weight: bold;
+      font-size: 1.15rem;
     }
     .repo p {
       font-size: 0.9rem;
       color: var(--text-color);
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+    .repo p:last-of-type { /* Adjust margin for last paragraph */
+        margin-bottom: 0;
     }
     .private-badge {
       background-color: #6a0000;
@@ -128,26 +181,113 @@
       border-radius: 4px;
       font-size: 0.75rem;
       float: right;
+      margin-left: 0.5rem; /* Add some space next to title */
     }
 
-    /* Language bar */
-    .lang-bar {
+    /* Language bar (matches HTML class "language-bar") */
+    .language-bar {
       display: flex;
-      height: 8px;
+      height: 8px; /* Slightly increased height for visibility */
       border-radius: 4px;
       overflow: hidden;
-      margin-top: 0.5rem;
-      margin-bottom: 0.5rem;
-      border: 1px solid var(--border-color);
+      margin-top: 0.75rem; /* More space from text above */
+      margin-bottom: 0.25rem;
+      border: 1px solid var(--border-color); /* Add a subtle border to the bar */
+      flex-shrink: 0; /* Prevent it from shrinking */
     }
 
-    .lang-segment {
+    .language-bar div { /* Target segments within the bar */
       height: 100%;
+      /* No width here, width is set inline by Jinja */
+    }
+
+    /* Language legend styling */
+    .language-legend {
+        display: flex;
+        flex-wrap: wrap; /* Allow items to wrap */
+        gap: 10px; /* Space between language items */
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-color);
+    }
+
+    .language-item {
+        display: flex;
+        align-items: center;
+        gap: 4px; /* Space between color dot and text */
+    }
+
+    .language-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        /* Background color set inline */
+    }
+
+    /* Flash messages styling */
+    .flash-messages {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        width: fit-content;
+        max-width: 80%;
+    }
+    .flash {
+        padding: 10px 20px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        opacity: 0.95;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .flash.success {
+        background-color: #28a745; /* Green */
+        color: white;
+    }
+    .flash.error {
+        background-color: #dc3545; /* Red */
+        color: white;
+    }
+    .flash.info {
+        background-color: #007bff; /* Blue */
+        color: white;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+        .filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .filters input, .filters select, .filters button {
+            max-width: 100%;
+        }
+        .repos {
+            grid-template-columns: 1fr; /* Single column on smaller screens */
+        }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+
     <div class="top-actions">
       <div class="theme-toggle">
         <button onclick="toggleTheme()">🌗 Switch Theme</button>
@@ -174,8 +314,14 @@
       <input type="text" id="searchInput" placeholder="Search repositories...">
       <select id="langFilter">
         <option value="">All Languages</option>
+        {# Collect unique languages from repos passed by Flask #}
         {% set langs = [] %}
-        {% for repo in repos %}{% if repo.language %}{% set _ = langs.append(repo.language) %}{% endif %}{% endfor %}
+        {% for repo in repos %}
+          {% if repo.language %}
+            {% set _ = langs.append(repo.language) %}
+          {% endif %}
+        {% endfor %}
+        {# Sort and display unique languages #}
         {% for lang in langs|unique|sort %}
           <option value="{{ lang }}">{{ lang }}</option>
         {% endfor %}
@@ -200,15 +346,28 @@
     <div class="repos" id="reposContainer">
       {% for repo in repos %}
         <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}">
-          <h3><a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a> {% if repo.private %}<span class="private-badge">Private</span>{% endif %}</h3>
+          <h3>
+            <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
+            {% if repo.private %}<span class="private-badge">Private</span>{% endif %}
+          </h3>
           <p>{{ repo.description or 'No description' }}</p>
           <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or 'N/A' }}</p>
           <p>🕓 Last updated: {{ repo.updated_at[:10] }}</p>
 
+          {# Language Bar #}
           {% if repo.language_percentages %}
-            <div class="language-bar" style="display: flex; height: 6px; margin-top: 6px; border-radius: 4px; overflow: hidden;">
+            <div class="language-bar">
               {% for lang, percent in repo.language_percentages.items() %}
                 <div style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%"></div>
+              {% endfor %}
+            </div>
+            {# Language Legend below the bar #}
+            <div class="language-legend">
+              {% for lang, percent in repo.language_percentages.items() %}
+                <span class="language-item">
+                  <span class="language-dot" style="background-color: {{ language_colors.get(lang, '#999') }};"></span>
+                  {{ lang }} {{ percent }}%
+                </span>
               {% endfor %}
             </div>
           {% endif %}
@@ -222,14 +381,30 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       originalRepos = Array.from(document.querySelectorAll(".repo"));
+      
+      // Flash messages fade out
+      document.querySelectorAll('.flash').forEach(flashMessage => {
+          setTimeout(() => {
+              flashMessage.style.transition = 'opacity 0.5s ease-out';
+              flashMessage.style.opacity = '0';
+              flashMessage.addEventListener('transitionend', () => flashMessage.remove());
+          }, 3000); // Message disappears after 3 seconds
+      });
+
+
       restoreFilters();
       applyEventListeners();
-      filterRepos(); // run on load
+      filterRepos(); // Run filter on initial load to apply saved filters
 
       document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 
+      // Apply saved theme on load
       const savedTheme = localStorage.getItem('theme');
-      if (savedTheme === 'light') toggleTheme();
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
     });
 
     function applyEventListeners() {
@@ -252,6 +427,7 @@
       const visibility = document.getElementById("visibilityFilter").value;
       const search = document.getElementById("searchInput").value.toLowerCase();
 
+      // Save filter states to localStorage
       localStorage.setItem("lang", lang);
       localStorage.setItem("stars", stars);
       localStorage.setItem("visibility", visibility);
@@ -260,79 +436,82 @@
       let filtered = originalRepos.filter(repo => {
         const langAttr = repo.getAttribute("data-lang").toLowerCase();
         const isPrivate = repo.getAttribute("data-private") === "true";
-        const name = repo.querySelector("h3 a").textContent.toLowerCase(); // Changed to specifically target the repo name link
+        // Target the text content of the <a> tag within <h3> for the repo name
+        const name = repo.querySelector("h3 a").textContent.toLowerCase();
 
+        // Apply filters
         return (!lang || langAttr === lang) &&
-               (visibility === "all" || (visibility === "private") === isPrivate) &&
+               (visibility === "all" || (visibility === "private" === isPrivate)) &&
                (!search || name.includes(search));
       });
 
+      // Sort by stars
       filtered.sort((a, b) => {
         const sa = parseInt(a.getAttribute("data-stars")) || 0;
         const sb = parseInt(b.getAttribute("data-stars")) || 0;
-        return stars === "asc" ? sa - sb : stars === "desc" ? sb - sa : 0;
+        return stars === "asc" ? sa - sb : stars === "desc" ? sb - sa : 0; // 0 means no change in order if stars are equal or no sort applied
       });
 
+      // Update the DOM
       const container = document.querySelector(".repos");
-      container.innerHTML = "";
-      filtered.forEach(r => container.appendChild(r));
+      container.innerHTML = ""; // Clear existing repos
+      filtered.forEach(r => container.appendChild(r)); // Append filtered/sorted repos
 
+      // Update repo count display
       document.getElementById("repoCountNumber").textContent = filtered.length;
     }
 
     function exportToCSV() {
-      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]]; // Added "Private" column
+      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
       const repos = document.querySelectorAll(".repo");
       repos.forEach(repo => {
-        const name = repo.querySelector("h3 a").textContent.trim(); // Target the specific link for the name
+        const name = repo.querySelector("h3 a").textContent.trim();
         const description = repo.querySelectorAll("p")[0].textContent.trim();
         const statsParagraph = repo.querySelectorAll("p")[1].textContent.trim();
 
-        // Robust extraction of Stars, Forks, and Language
+        // Robust extraction using regex (safer than fixed index)
         const starsMatch = statsParagraph.match(/⭐ (\d+)/);
-        const stars = starsMatch ? starsMatch[1] : 0;
+        const stars = starsMatch ? starsMatch[1] : '0';
 
         const forksMatch = statsParagraph.match(/🍴 (\d+)/);
-        const forks = forksMatch ? forksMatch[1] : 0;
+        const forks = forksMatch ? forksMatch[1] : '0';
 
-        const languageMatch = statsParagraph.match(/🛠 ([^|]+)/);
+        const languageMatch = statsParagraph.match(/🛠 ([^|]+)/); // Capture language until next '|' or end
         const language = languageMatch ? languageMatch[1].trim() : 'N/A';
 
         const updated = repo.querySelectorAll("p")[2].textContent.replace("🕓 Last updated: ", "").trim();
-        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No"; // Get private status
+        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
 
         rows.push([name, description, stars, forks, language, updated, isPrivate]);
       });
-      const csv = rows.map(e => e.map(v => `"${v}"`).join(",")).join("\n");
+
+      // Generate CSV string
+      const csv = rows.map(e => e.map(v => {
+          // Escape double quotes within data by doubling them, then wrap in quotes
+          const escaped = String(v).replace(/"/g, '""');
+          return `"${escaped}"`;
+      }).join(",")).join("\n");
+
+      // Create and download CSV file
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "github_repositories.csv";
+      document.body.appendChild(link); // Append to body is good practice before click
       link.click();
+      document.body.removeChild(link); // Clean up
     }
 
     function toggleTheme() {
-      const root = document.documentElement;
-      const dark = {
-        '--bg-color': '#0d1117',
-        '--text-color': '#c9d1d9',
-        '--link-color': '#58a6ff',
-        '--border-color': '#30363d',
-        '--card-bg': '#161b22',
-        '--hover-bg': '#1c2128'
-      };
-      const light = {
-        '--bg-color': '#ffffff',
-        '--text-color': '#24292f',
-        '--link-color': '#0969da',
-        '--border-color': '#d0d7de',
-        '--card-bg': '#f6f8fa',
-        '--hover-bg': '#eaeef2'
-      };
-      const isDark = root.style.getPropertyValue('--bg-color') === dark['--bg-color'];
-      const theme = isDark ? light : dark;
-      for (const key in theme) root.style.setProperty(key, theme[key]);
-      localStorage.setItem('theme', isDark ? 'light' : 'dark');
+      const body = document.body;
+      body.classList.toggle('light-theme'); // Toggle the light-theme class
+      
+      // Save theme preference to localStorage
+      if (body.classList.contains('light-theme')) {
+        localStorage.setItem('theme', 'light');
+      } else {
+        localStorage.setItem('theme', 'dark');
+      }
     }
   </script>
 </body>
