@@ -148,7 +148,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Top Right Actions -->
     <div class="top-actions">
       <div class="theme-toggle">
         <button onclick="toggleTheme()">🌗 Switch Theme</button>
@@ -156,7 +155,6 @@
       <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
     </div>
 
-    <!-- Profile Section -->
     <div class="profile">
       <img src="{{ user.avatar_url }}" alt="User Avatar">
       <h1>{{ user.name or user.login }}</h1>
@@ -172,7 +170,6 @@
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="filters">
       <input type="text" id="searchInput" placeholder="Search repositories...">
       <select id="langFilter">
@@ -196,12 +193,10 @@
       <button id="exportCSV">Export CSV</button>
     </div>
 
-    <!-- Repo Count Display -->
     <div id="repoCount">
       Showing <span id="repoCountNumber">{{ repos|length }}</span> repositories
     </div>
 
-    <!-- Repo Cards -->
     <div class="repos" id="reposContainer">
       {% for repo in repos %}
         <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}">
@@ -211,9 +206,9 @@
           <p>🕓 Last updated: {{ repo.updated_at[:10] }}</p>
 
           {% if repo.language_percentages %}
-            <div class="lang-bar">
+            <div class="language-bar" style="display: flex; height: 6px; margin-top: 6px; border-radius: 4px; overflow: hidden;">
               {% for lang, percent in repo.language_percentages.items() %}
-                <div class="lang-segment" style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }}" title="{{ lang }}: {{ percent }}%"></div>
+                <div style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%"></div>
               {% endfor %}
             </div>
           {% endif %}
@@ -265,7 +260,7 @@
       let filtered = originalRepos.filter(repo => {
         const langAttr = repo.getAttribute("data-lang").toLowerCase();
         const isPrivate = repo.getAttribute("data-private") === "true";
-        const name = repo.querySelector("a").textContent.toLowerCase();
+        const name = repo.querySelector("h3 a").textContent.toLowerCase(); // Changed to specifically target the repo name link
 
         return (!lang || langAttr === lang) &&
                (visibility === "all" || (visibility === "private") === isPrivate) &&
@@ -286,18 +281,27 @@
     }
 
     function exportToCSV() {
-      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At"]];
+      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]]; // Added "Private" column
       const repos = document.querySelectorAll(".repo");
       repos.forEach(repo => {
-        const name = repo.querySelector("a").textContent.trim();
+        const name = repo.querySelector("h3 a").textContent.trim(); // Target the specific link for the name
         const description = repo.querySelectorAll("p")[0].textContent.trim();
-        const stats = repo.querySelectorAll("p")[1].textContent.match(/\d+/g) || [];
-        const stars = stats[0] || 0;
-        const forks = stats[1] || 0;
-        const language = stats[2] || 'N/A';
-        const updated = repo.querySelectorAll("p")[2].textContent.replace("Last updated: ", "").trim();
+        const statsParagraph = repo.querySelectorAll("p")[1].textContent.trim();
 
-        rows.push([name, description, stars, forks, language, updated]);
+        // Robust extraction of Stars, Forks, and Language
+        const starsMatch = statsParagraph.match(/⭐ (\d+)/);
+        const stars = starsMatch ? starsMatch[1] : 0;
+
+        const forksMatch = statsParagraph.match(/🍴 (\d+)/);
+        const forks = forksMatch ? forksMatch[1] : 0;
+
+        const languageMatch = statsParagraph.match(/🛠 ([^|]+)/);
+        const language = languageMatch ? languageMatch[1].trim() : 'N/A';
+
+        const updated = repo.querySelectorAll("p")[2].textContent.replace("🕓 Last updated: ", "").trim();
+        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No"; // Get private status
+
+        rows.push([name, description, stars, forks, language, updated, isPrivate]);
       });
       const csv = rows.map(e => e.map(v => `"${v}"`).join(",")).join("\n");
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

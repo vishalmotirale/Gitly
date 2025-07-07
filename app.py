@@ -184,13 +184,28 @@ def dashboard():
                     repo['language_percentages'] = get_language_percentages(repo['full_name'], headers)
                 all_repos.extend(data)
                 page += 1
-
+    language_colors = {
+    "Python": "#3572A5",
+    "JavaScript": "#f1e05a",
+    "HTML": "#e34c26",
+    "CSS": "#563d7c",
+    "Java": "#b07219",
+    "C++": "#f34b7d",
+    "C": "#555555",
+    "Shell": "#89e051",
+    "Go": "#00ADD8",
+    "TypeScript": "#2b7489",
+    "Ruby": "#701516",
+    "PHP": "#4F5D95",
+    "Jupyter Notebook": "#DA5B0B"
+    }
     return render_template(
         'dashboard.html',
         user=user_data,
         repos=all_repos,
         error=error_message,
-        is_authenticated=is_authenticated
+        is_authenticated=is_authenticated,
+        language_colors=language_colors
     )
 @app.route('/logout')
 def logout(): 
