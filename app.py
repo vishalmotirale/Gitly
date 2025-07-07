@@ -34,17 +34,37 @@ def print_rate_limit_info(response, context=""):
     rate_limit_reset = response.headers.get('X-RateLimit-Reset')
     print(f"DEBUG: {context} Rate Limit Remaining: {rate_limit_remaining}, Reset: {rate_limit_reset}")
 
+repo_language_cache = {}
+CACHE_EXPIRY_SECONDS = 3600 
+
 def get_language_percentages(repo_full_name, headers):
+    cache_key = f"lang_data_{repo_full_name}"
+    
+    if cache_key in repo_language_cache and \
+       (time.time() - repo_language_cache[cache_key]['timestamp']) < CACHE_EXPIRY_SECONDS:
+        print(f"DEBUG: Using cached language data for {repo_full_name}")
+        return repo_language_cache[cache_key]['data']
+
     url = f"{GITHUB_API_BASE_URL}/repos/{repo_full_name}/languages"
     resp = requests.get(url, headers=headers)
-    if resp.status_code != 200:
+    print_rate_limit_info(resp, f"Languages API for {repo_full_name}")
+    if resp.status_code == 403:
+        print(f"ERROR: Rate limit hit for language data of {repo_full_name}. Response: {resp.text}")
+        flash("GitHub API rate limit exceeded for language data. Some language bars may be missing.", 'error')
         return {}
+    elif resp.status_code != 200:
+        print(f"ERROR: Failed to fetch languages for {repo_full_name}. Status: {resp.status_code}, Response: {resp.text}")
+        return {}
+    
     data = resp.json()
     total = sum(data.values())
     if total == 0:
+        repo_language_cache[cache_key] = {'data': {}, 'timestamp': time.time()}
         return {}
-    return {lang: round((count / total) * 100, 1) for lang, count in data.items()}
-
+    percentages = {lang: round((count / total) * 100, 1) for lang, count in data.items()}
+    repo_language_cache[cache_key] = {'data': percentages, 'timestamp': time.time()}
+    
+    return percentages
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'oauth_token' in session:
