@@ -87,11 +87,18 @@
       transition: background 0.3s;
     }
 
+    #repoCount {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--text-color);
+    }
+
     .repos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1rem;
-      margin-top: 1rem;
     }
     .repo {
       background-color: var(--card-bg);
@@ -176,8 +183,13 @@
       <button id="exportCSV">Export CSV</button>
     </div>
 
+    <!-- Repo Count Display -->
+    <div id="repoCount">
+      Showing <span id="repoCountNumber">{{ repos|length }}</span> repositories
+    </div>
+
     <!-- Repo Cards -->
-    <div class="repos">
+    <div class="repos" id="reposContainer">
       {% for repo in repos %}
         <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}">
           <h3><a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a> {% if repo.private %}<span class="private-badge">Private</span>{% endif %}</h3>
@@ -196,7 +208,7 @@
       originalRepos = Array.from(document.querySelectorAll(".repo"));
       restoreFilters();
       applyEventListeners();
-      filterRepos(); // Run once on page load
+      filterRepos(); // run on load
 
       document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 
@@ -248,6 +260,8 @@
       const container = document.querySelector(".repos");
       container.innerHTML = "";
       filtered.forEach(r => container.appendChild(r));
+
+      document.getElementById("repoCountNumber").textContent = filtered.length;
     }
 
     function exportToCSV() {
