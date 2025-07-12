@@ -1,11 +1,12 @@
 import sqlite3
 from flask import g
 
-DB_PATH = "tracking/gitly.db"
-
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        import os
+        print("📦 Using DB path:", os.path.abspath("tracking/gitly.db"))
+        g.db = sqlite3.connect("tracking/gitly.db")
+        g.db.row_factory = sqlite3.Row
     return g.db
 
 def close_db(e=None):
