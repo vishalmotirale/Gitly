@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from oauthlib.oauth2 import MismatchingStateError
 import datetime
 import time
+from tracking.db import get_db, close_db
+from tracking.logger import log_activity
 
 load_dotenv('repos.env')
 
@@ -13,6 +15,10 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+@app.before_request
+def before_request():
+    log_activity()
 
 client_id = os.getenv("GITHUB_CLIENT_ID")
 client_secret = os.getenv("GITHUB_CLIENT_SECRET")
@@ -30,6 +36,8 @@ if not client_secret:
     raise EnvironmentError("Missing GITHUB_CLIENT_SECRET environment variable.")
 if not github_pat and not os.getenv('RENDER'): # Only warn/raise if not on Render and PAT is missing
     print("WARNING: GITHUB_APP_TOKEN not set. Public API requests might hit lower rate limits.")
+
+
 
 def print_rate_limit_info(response, context=""):
     rate_limit_remaining = response.headers.get('X-RateLimit-Remaining')
@@ -248,15 +256,51 @@ def dashboard():
         is_authenticated=is_authenticated,
         language_colors=language_colors
     )
+
+
 @app.route('/logout')
 def logout(): 
     session.clear()
     flash('You have been logged out.', 'info') # Re-added flash message
     return redirect(url_for('index'))
 
+@app.route("/admin/activity")
+def view_activity():
+    db = get_db()
+    logs = db.execute(
+        "SELECT username, path, params, timestamp FROM user_activity ORDER BY timestamp DESC LIMIT 50"
+    ).fetchall()
+    return "<br>".join([
+        f"{row[3]} — <b>{row[0]}</b> visited <code>{row[1]}</code> with params {row[2]}"
+        for row in logs
+    ])
+
+@app.route('/admin/activity/export')
+def export_activity():
+    import csv
+    from flask import Response
+
+    db = get_db()
+    logs = db.execute("SELECT * FROM user_activity ORDER BY timestamp DESC").fetchall()
+
+    def generate():
+        data = ['id,username,path,params,user_agent,ip_address,timestamp\n']
+        for row in logs:
+            line = ",".join([str(i).replace(',', ';') for i in row]) + "\n"
+            data.append(line)
+        return data
+
+    return Response(generate(), mimetype='text/csv',
+                    headers={"Content-Disposition": "attachment;filename=activity_log.csv"})
+
 @app.errorhandler(404)
 def not_found(e): 
     return render_template("404.html"), 404
+
+
+@app.teardown_appcontext
+def teardown(exception):
+    close_db()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 1000))
