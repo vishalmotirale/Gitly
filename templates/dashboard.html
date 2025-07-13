@@ -184,21 +184,55 @@
       margin-left: 0.5rem; /* Add some space next to title */
     }
 
-    /* Language bar (matches HTML class "language-bar") */
-    .language-bar {
-      display: flex;
-      height: 8px; /* Slightly increased height for visibility */
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 0.75rem; /* More space from text above */
-      margin-bottom: 0.25rem;
-      border: 1px solid var(--border-color); /* Add a subtle border to the bar */
-      flex-shrink: 0; /* Prevent it from shrinking */
+    /* Language Distribution Bar Styles - Copied from previous dashboard-html-language-dist */
+    .language-bar-container { /* Renamed from .language-bar for consistency with previous immersive */
+        width: 100%;
+        height: 8px; /* Height of the bar */
+        background-color: #30363d; /* Background for empty/unrecognized parts */
+        border-radius: 4px;
+        overflow: hidden; /* Ensures rounded corners apply to inner segments */
+        margin-top: 0.75rem; /* Space above the bar (adjusted for new layout) */
+        display: flex; /* Makes segments align horizontally */
+        border: 1px solid var(--border-color); /* Add a subtle border to the bar */
+        flex-shrink: 0; /* Prevent it from shrinking */
     }
-
-    .language-bar div { /* Target segments within the bar */
-      height: 100%;
-      /* No width here, width is set inline by Jinja */
+    .language-segment {
+        height: 100%;
+        display: block;
+        position: relative; /* For tooltip positioning */
+        transition: width 0.3s ease-in-out;
+    }
+    .language-segment:hover .language-tooltip {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    .language-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        text-align: center;
+        border-radius: 4px;
+        padding: 5px 8px;
+        position: absolute;
+        z-index: 1;
+        bottom: 120%; /* Position above the segment */
+        left: 50%;
+        transform: translateX(-50%) translateY(0);
+        transition: opacity 0.3s, transform 0.3s;
+        white-space: nowrap; /* Keep text on one line */
+        font-size: 0.75rem;
+    }
+    .language-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
     }
 
     /* Language legend styling */
@@ -315,14 +349,14 @@
       <select id="langFilter">
         <option value="">All Languages</option>
         {# Collect unique languages from repos passed by Flask #}
-        {% set langs = [] %}
+        {% set all_languages = [] %}
         {% for repo in repos %}
           {% if repo.language %}
-            {% set _ = langs.append(repo.language) %}
+            {% set _ = all_languages.append(repo.language) %}
           {% endif %}
         {% endfor %}
         {# Sort and display unique languages #}
-        {% for lang in langs|unique|sort %}
+        {% for lang in all_languages|unique|sort %}
           <option value="{{ lang }}">{{ lang }}</option>
         {% endfor %}
       </select>
@@ -356,9 +390,11 @@
 
           {# Language Bar #}
           {% if repo.language_percentages %}
-            <div class="language-bar">
+            <div class="language-bar-container">
               {% for lang, percent in repo.language_percentages.items() %}
-                <div style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%"></div>
+                <div class="language-segment" style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%">
+                  <span class="language-tooltip">{{ lang }}: {{ percent }}%</span>
+                </div>
               {% endfor %}
             </div>
             {# Language Legend below the bar #}
@@ -373,6 +409,10 @@
           {% endif %}
         </div>
       {% endfor %}
+      {# This message is now inside the .repos container, so it will display when repos list is empty #}
+      {% if not repos %}
+        <p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>
+      {% endif %}
     </div>
   </div>
 
@@ -380,6 +420,8 @@
     let originalRepos = [];
 
     document.addEventListener("DOMContentLoaded", () => {
+      // Initialize originalRepos after all .repo elements are parsed
+      // This will be empty if no repos are rendered, but the container will exist.
       originalRepos = Array.from(document.querySelectorAll(".repo"));
       
       // Flash messages fade out
@@ -391,12 +433,18 @@
           }, 3000); // Message disappears after 3 seconds
       });
 
-
       restoreFilters();
       applyEventListeners();
-      filterRepos(); // Run filter on initial load to apply saved filters
+      // Call filterRepos to ensure initial state is correct, even if originalRepos is empty
+      filterRepos(); 
 
-      document.getElementById("exportCSV").addEventListener("click", exportToCSV);
+      const exportCSVButton = document.getElementById("exportCSV");
+      if (exportCSVButton) { // Add null check for the button
+        exportCSVButton.addEventListener("click", exportToCSV);
+      } else {
+        console.error("Element with ID 'exportCSV' not found.");
+      }
+
 
       // Apply saved theme on load
       const savedTheme = localStorage.getItem('theme');
@@ -408,24 +456,56 @@
     });
 
     function applyEventListeners() {
-      document.getElementById("langFilter").addEventListener("change", filterRepos);
-      document.getElementById("starFilter").addEventListener("change", filterRepos);
-      document.getElementById("visibilityFilter").addEventListener("change", filterRepos);
-      document.getElementById("searchInput").addEventListener("input", filterRepos);
+      // Add null checks before adding event listeners
+      const langFilterElement = document.getElementById("langFilter");
+      if (langFilterElement) langFilterElement.addEventListener("change", filterRepos);
+
+      const starFilterElement = document.getElementById("starFilter");
+      if (starFilterElement) starFilterElement.addEventListener("change", filterRepos);
+
+      const visibilityFilterElement = document.getElementById("visibilityFilter");
+      if (visibilityFilterElement) visibilityFilterElement.addEventListener("change", filterRepos);
+
+      const searchInputElement = document.getElementById("searchInput");
+      if (searchInputElement) searchInputElement.addEventListener("input", filterRepos);
     }
 
     function restoreFilters() {
-      document.getElementById("langFilter").value = localStorage.getItem("lang") || "";
-      document.getElementById("starFilter").value = localStorage.getItem("stars") || "";
-      document.getElementById("visibilityFilter").value = localStorage.getItem("visibility") || "all";
-      document.getElementById("searchInput").value = localStorage.getItem("search") || "";
+      // Added null checks to prevent "Cannot set properties of null" error
+      const langFilterElement = document.getElementById("langFilter");
+      if (langFilterElement) {
+        langFilterElement.value = localStorage.getItem("lang") || "";
+      } else {
+        console.error("Element with ID 'langFilter' not found during restoreFilters.");
+      }
+
+      const starFilterElement = document.getElementById("starFilter");
+      if (starFilterElement) {
+        starFilterElement.value = localStorage.getItem("stars") || "";
+      } else {
+        console.error("Element with ID 'starFilter' not found during restoreFilters.");
+      }
+
+      const visibilityFilterElement = document.getElementById("visibilityFilter");
+      if (visibilityFilterElement) {
+        visibilityFilterElement.value = localStorage.getItem("visibility") || "all";
+      } else {
+        console.error("Element with ID 'visibilityFilter' not found during restoreFilters.");
+      }
+
+      const searchInputElement = document.getElementById("searchInput");
+      if (searchInputElement) {
+        searchInputElement.value = localStorage.getItem("search") || "";
+      } else {
+        console.error("Element with ID 'searchInput' not found during restoreFilters.");
+      }
     }
 
     function filterRepos() {
-      const lang = document.getElementById("langFilter").value.toLowerCase();
-      const stars = document.getElementById("starFilter").value;
-      const visibility = document.getElementById("visibilityFilter").value;
-      const search = document.getElementById("searchInput").value.toLowerCase();
+      const lang = document.getElementById("langFilter")?.value.toLowerCase() || "";
+      const stars = document.getElementById("starFilter")?.value || "";
+      const visibility = document.getElementById("visibilityFilter")?.value || "all";
+      const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
 
       // Save filter states to localStorage
       localStorage.setItem("lang", lang);
@@ -434,10 +514,10 @@
       localStorage.setItem("search", search);
 
       let filtered = originalRepos.filter(repo => {
-        const langAttr = repo.getAttribute("data-lang").toLowerCase();
+        const langAttr = repo.getAttribute("data-lang")?.toLowerCase() || "";
         const isPrivate = repo.getAttribute("data-private") === "true";
         // Target the text content of the <a> tag within <h3> for the repo name
-        const name = repo.querySelector("h3 a").textContent.toLowerCase();
+        const name = repo.querySelector("h3 a")?.textContent.toLowerCase() || "";
 
         // Apply filters
         return (!lang || langAttr === lang) &&
@@ -454,20 +534,31 @@
 
       // Update the DOM
       const container = document.querySelector(".repos");
-      container.innerHTML = ""; // Clear existing repos
-      filtered.forEach(r => container.appendChild(r)); // Append filtered/sorted repos
+      // Check if container exists before trying to set innerHTML
+      if (container) {
+        container.innerHTML = ""; // Clear existing repos
+        filtered.forEach(r => container.appendChild(r)); // Append filtered/sorted repos
+      } else {
+        console.error("Element with class 'repos' (container) not found during filterRepos.");
+      }
+
 
       // Update repo count display
-      document.getElementById("repoCountNumber").textContent = filtered.length;
+      const repoCountNumberElement = document.getElementById("repoCountNumber");
+      if (repoCountNumberElement) { // Add null check for repoCountNumber
+        repoCountNumberElement.textContent = filtered.length;
+      } else {
+        console.error("Element with ID 'repoCountNumber' not found during filterRepos.");
+      }
     }
 
     function exportToCSV() {
       const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
       const repos = document.querySelectorAll(".repo");
       repos.forEach(repo => {
-        const name = repo.querySelector("h3 a").textContent.trim();
-        const description = repo.querySelectorAll("p")[0].textContent.trim();
-        const statsParagraph = repo.querySelectorAll("p")[1].textContent.trim();
+        const name = repo.querySelector("h3 a")?.textContent.trim() || "";
+        const description = repo.querySelectorAll("p")[0]?.textContent.trim() || "";
+        const statsParagraph = repo.querySelectorAll("p")[1]?.textContent.trim() || "";
 
         // Robust extraction using regex (safer than fixed index)
         const starsMatch = statsParagraph.match(/⭐ (\d+)/);
@@ -479,7 +570,7 @@
         const languageMatch = statsParagraph.match(/🛠 ([^|]+)/); // Capture language until next '|' or end
         const language = languageMatch ? languageMatch[1].trim() : 'N/A';
 
-        const updated = repo.querySelectorAll("p")[2].textContent.replace("🕓 Last updated: ", "").trim();
+        const updated = repo.querySelectorAll("p")[2]?.textContent.replace("🕓 Last updated: ", "").trim() || "";
         const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
 
         rows.push([name, description, stars, forks, language, updated, isPrivate]);
