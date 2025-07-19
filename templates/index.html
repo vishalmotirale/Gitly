@@ -120,7 +120,7 @@
       color: white;
     }
 
-    /* ✅ Custom style for theme switch button */
+    /* Custom style for theme switch button */
     #theme-btn .btn-outline-primary {
       display: flex;
       align-items: center;
@@ -222,6 +222,48 @@
       align-items: center;
       width: 100%;
     }
+
+    /* Flash Messages Styling */
+    .flash-messages-container {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem; /* Space below the message */
+      text-align: center;
+      width: 100%;
+      max-width: 400px; /* Adjust as needed */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      opacity: 1; /* Ensure initial opacity is 1 */
+      transition: opacity 0.5s ease-out; /* Add transition for smooth fade */
+    }
+
+    .flash-message.error {
+      background-color: #2b1a1a;
+      color: #ff7b72;
+      border: 1px solid #ff7b72;
+    }
+
+    .flash-message.success {
+      background-color: #1a2b1a;
+      color: #238636;
+      border: 1px solid #238636;
+    }
+
+    .flash-message.info {
+      background-color: #1a202b;
+      color: #58a6ff;
+      border: 1px solid #58a6ff;
+    }
   </style>
 </head>
 <body>
@@ -232,10 +274,25 @@
 
   <div id="main-content">
     <div class="position-absolute top-0 end-0 m-3 hidden" id="theme-btn">
-      <button class="btn btn-outline-primary">
+      <button class="btn btn-outline-primary" onclick="toggleTheme()">
         🌗 Switch Theme
       </button>
     </div>
+
+    {# Flash Messages Display #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages-container">
+          <div style="width: 100%; max-width: 400px;">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }} mb-2">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    {% endwith %}
 
     <div class="logo-container mb-2">
       <h1 id="g-letter">G</h1>
@@ -247,20 +304,19 @@
       Access public GitHub profiles or sign in to view your private repositories.
     </p>
 
-    <div id="search-box" class="animate__animated hidden w-100 px-3">
-      <input type="text" class="form-control" placeholder="Search GitHub username">
-    </div>
-
-    <div id="public-btn" class="animate__animated hidden">
-      <button class="btn btn-success mt-3">View Public Repos</button>
-    </div>
+    {# Form for "View Public Repos" #}
+    <form action="/" method="POST" id="search-form" class="animate__animated hidden w-100 px-3">
+      <input type="text" name="username" class="form-control" placeholder="Search GitHub username">
+      <button type="submit" class="btn btn-success mt-3">View Public Repos</button>
+    </form>
 
     <p id="or-text" class="animate__animated hidden mt-3">or</p>
 
+    {# Link for "Sign in with GitHub" #}
     <div id="github-btn" class="animate__animated hidden">
-      <button class="btn btn-primary">
+      <a href="{{ url_for('login') }}" class="btn btn-primary">
         <i class="bi bi-github" aria-hidden="true"></i> Sign in with GitHub
-      </button>
+      </a>
     </div>
 
     <footer id="footer" class="text-muted animate__animated hidden">
@@ -280,14 +336,22 @@
 
       await sleep(500);
       const ids = [
-        "subtitle", "description", "search-box",
-        "public-btn", "or-text", "github-btn", "footer", "theme-btn"
+        "subtitle", "description", "search-form", // Changed to search-form
+        "or-text", "github-btn", "footer", "theme-btn"
       ];
       await sleep(1500);
       ids.forEach(id => {
         const el = document.getElementById(id);
         el.classList.remove("hidden");
         el.classList.add("animate__fadeInUp", "show");
+      });
+
+      // Flash messages fade out after 3 seconds
+      document.querySelectorAll('.flash-message').forEach(flashMessage => {
+          setTimeout(() => {
+              flashMessage.style.opacity = '0';
+              flashMessage.addEventListener('transitionend', () => flashMessage.remove());
+          }, 3000);
       });
     };
 
@@ -296,13 +360,20 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      const themeBtn = document.getElementById("theme-btn");
-      if (themeBtn) {
-        themeBtn.addEventListener("click", () => {
-          document.body.classList.toggle("light-mode");
-        });
+      // Apply saved theme on load
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light-mode') {
+        document.body.classList.add('light-mode');
+      } else {
+        document.body.classList.remove('light-mode');
       }
     });
+
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('light-mode');
+      localStorage.setItem('theme', body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode');
+    }
   </script>
 
 </body>
