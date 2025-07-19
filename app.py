@@ -166,6 +166,7 @@ def dashboard():
                     data = repo_response.json()
                     if not data:
                         break
+                    
                     for repo in data:
                         repo['private'] = bool(repo.get('private', False))
                         repo['language_percentages'] = get_language_percentages(repo['full_name'], request_headers)
@@ -237,9 +238,9 @@ def dashboard():
                 page += 1
 
     language_colors = {
-    "Python": "#3572A5",       
-    "JavaScript": "#F7DF1E",   
-    "HTML": "#E34C26",         
+    "Python": "#3572A5",      
+    "JavaScript": "#F7DF1E",  
+    "HTML": "#E34C26",        
     "CSS": "#563D7C",          
     "Java": "#B07219",         
     "C++": "#f34b7d",          
