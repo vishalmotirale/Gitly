@@ -120,6 +120,26 @@
       color: white;
     }
 
+    .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #ffffff55;
+        border-top: 3px solid white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        /* Removed margin-left as it's handled by gap-2 on parent */
+    }
+    @keyframes spin {
+      to {
+          transform: rotate(360deg);
+      }
+    }
+    .hidden {
+      display: none;
+    }
+
+
     /* Custom style for theme switch button */
     #theme-btn .btn-outline-primary {
       display: flex;
@@ -146,7 +166,8 @@
       font-size: 0.9rem;
     }
 
-    .hidden { visibility: hidden; }
+    /* Original 'hidden' class for visibility animation */
+    .initial-hidden { visibility: hidden; }
     .show { visibility: visible; }
 
     #g-letter, #itly-word {
@@ -273,7 +294,7 @@
   </div>
 
   <div id="main-content">
-    <div class="position-absolute top-0 end-0 m-3 hidden" id="theme-btn">
+    <div class="position-absolute top-0 end-0 m-3 initial-hidden" id="theme-btn">
       <button class="btn btn-outline-primary" onclick="toggleTheme()">
         🌗 Switch Theme
       </button>
@@ -299,27 +320,30 @@
       <h1 id="itly-word">itly</h1>
     </div>
 
-    <h5 id="subtitle" class="animate__animated hidden">GitHub Manager</h5>
-    <p id="description" class="animate__animated hidden">
+    <h5 id="subtitle" class="animate__animated initial-hidden">GitHub Manager</h5>
+    <p id="description" class="animate__animated initial-hidden">
       Access public GitHub profiles or sign in to view your private repositories.
     </p>
 
     {# Form for "View Public Repos" #}
-    <form action="/" method="POST" id="search-form" class="animate__animated hidden w-100 px-3">
+    <form action="/" method="POST" id="search-form" class="animate__animated initial-hidden w-100 px-3">
       <input type="text" name="username" class="form-control" placeholder="Search GitHub username">
-      <button type="submit" class="btn btn-success mt-3">View Public Repos</button>
+      <button type="submit" id="view-public-repos-btn" class="btn btn-success mt-3 d-flex align-items-center justify-content-center gap-2" style="max-width: 400px; margin: 0 auto;">
+        <span id="btn-text">View Public Repos</span>
+        <div id="loading-spinner" class="spinner hidden"></div>
+      </button>
     </form>
 
-    <p id="or-text" class="animate__animated hidden mt-3">or</p>
+    <p id="or-text" class="animate__animated initial-hidden mt-3">or</p>
 
     {# Link for "Sign in with GitHub" #}
-    <div id="github-btn" class="animate__animated hidden">
+    <div id="github-btn" class="animate__animated initial-hidden">
       <a href="{{ url_for('login') }}" class="btn btn-primary">
         <i class="bi bi-github" aria-hidden="true"></i> Sign in with GitHub
       </a>
     </div>
 
-    <footer id="footer" class="text-muted animate__animated hidden">
+    <footer id="footer" class="text-muted animate__animated initial-hidden">
       © 2025 Gitly
     </footer>
   </div>
@@ -336,13 +360,13 @@
 
       await sleep(500);
       const ids = [
-        "subtitle", "description", "search-form", // Changed to search-form
+        "subtitle", "description", "search-form", 
         "or-text", "github-btn", "footer", "theme-btn"
       ];
       await sleep(1500);
       ids.forEach(id => {
         const el = document.getElementById(id);
-        el.classList.remove("hidden");
+        el.classList.remove("initial-hidden"); 
         el.classList.add("animate__fadeInUp", "show");
       });
 
@@ -366,6 +390,20 @@
         document.body.classList.add('light-mode');
       } else {
         document.body.classList.remove('light-mode');
+      }
+
+      // Spinner logic for "View Public Repos" button
+      const searchForm = document.getElementById("search-form");
+      const viewPublicReposBtn = document.getElementById("view-public-repos-btn");
+      const btnText = document.getElementById("btn-text"); 
+      const loadingSpinner = document.getElementById("loading-spinner");
+
+      if (searchForm && viewPublicReposBtn && btnText && loadingSpinner) {
+        searchForm.addEventListener("submit", function () {
+          viewPublicReposBtn.disabled = true; // Disable button first
+          btnText.classList.add("hidden"); // Hide the text
+          loadingSpinner.classList.remove("hidden"); // Show the spinner
+        });
       }
     });
 
