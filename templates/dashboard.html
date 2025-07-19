@@ -47,19 +47,23 @@
     .logout-btn {
       background-color: transparent;
       color: var(--link-color);
-      border: 1px solid var(--link-color);
-      padding: 8px 16px;
-      border-radius: 5px;
+      border: 1px solid var(--link-color); /* Reverted border thickness */
+      padding: 8px 16px; /* Reverted padding */
+      border-radius: 5px; /* Reverted border-radius */
       cursor: pointer;
-      font-size: 0.9rem;
-      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      font-size: 0.9rem; /* Reverted font size */
+      transition: all 0.3s ease; /* Unified transition for all properties */
       text-decoration: none;
+      box-shadow: none; /* Removed box-shadow from base state */
     }
+
     .theme-toggle button:hover,
     .logout-btn:hover {
-      background-color: var(--hover-bg);
-      border-color: var(--hover-bg); /* Match border to background on hover */
-      color: var(--text-color); /* Adjust text color on hover for contrast */
+      background-color: var(--hover-bg); /* Reverted hover background */
+      border-color: var(--hover-bg); /* Reverted hover border color */
+      color: var(--text-color); /* Reverted hover text color */
+      box-shadow: none; /* Removed box-shadow from hover state */
+      transform: translateY(-3px); /* Re-added subtle lift effect */
     }
 
     .profile {
@@ -379,10 +383,6 @@
     
     <div style="text-align: center; margin-bottom: 1.5rem;">
       <img src="{{ url_for('static', filename='images/gitly-logo.jpg') }}" alt="Gitly Logo" width="120">
-    </div>
-
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-      <img src="{{ url_for('static', filename='images/gitly-logo.jpg') }}" alt="Gitly Logo" width="100">
     </div>
 
     <div class="repos" id="reposContainer">
