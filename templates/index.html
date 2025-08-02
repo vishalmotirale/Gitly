@@ -70,7 +70,8 @@
 
     .form-control {
       max-width: 400px;
-      margin: 20px auto;
+      /* Restored original margin */
+      margin: 20px auto; 
       background-color: var(--input-bg);
       color: var(--text-color);
       border: 1px solid var(--input-border);
@@ -296,14 +297,14 @@
       flex-direction: column;
       align-items: center;
       width: 100%;
-      padding-top: 2rem;
+      padding-top: 5rem; /* Increased top padding to push content down */
       flex-grow: 1;
     }
 
     /* Flash Messages Styling */
     .flash-messages-container {
       position: absolute;
-      top: 20px;
+      top: 70px; /* Adjusted top position to prevent overlap */
       width: 100%;
       display: flex;
       justify-content: center;
@@ -347,7 +348,7 @@
       background-color: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 0.75rem;
-      padding: 1.5rem;
+      padding: 1.5rem; /* Restored original padding */
       text-align: left;
       transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -362,25 +363,26 @@
     }
     .feature-card .icon-container {
       background-color: var(--icon-bg);
-      width: 4rem;
-      height: 4rem;
+      width: 4rem; /* Restored original icon container size */
+      height: 4rem; /* Restored original icon container size */
       display: flex;
       justify-content: center;
       align-items: center;
       border-radius: 50%;
-      margin-bottom: 1rem;
+      margin-bottom: 1rem; /* Adjusted margin */
     }
     .feature-card .icon-container i {
-      font-size: 2rem;
+      font-size: 2rem; /* Restored original icon size */
       color: var(--icon-color);
     }
     .feature-card h5 {
       font-weight: 600;
-      font-size: 1.25rem;
-      margin-bottom: 0.5rem;
+      /* Restored original heading size and removed font-size override */
+      margin-bottom: 0.5rem; /* Restored original margin */
     }
     .feature-card p {
       color: #a0aec0;
+      /* Restored original paragraph size and removed font-size override */
       margin-bottom: 0;
     }
     body.light-mode .feature-card p {
