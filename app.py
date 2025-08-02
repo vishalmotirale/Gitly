@@ -6,6 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from dotenv import load_dotenv
 from oauthlib.oauth2 import MismatchingStateError
 import time
+from datetime import datetime, timedelta # Import for date calculations
 
 # Load environment variables from repos.env
 load_dotenv('repos.env')
@@ -158,6 +159,26 @@ def calculate_overall_language_stats(all_repos, headers):
     sorted_percentages = sorted(overall_percentages.items(), key=lambda item: item[1], reverse=True)
     return dict(sorted_percentages)
 
+def get_project_activity_status(last_pushed_at):
+    """
+    Analyzes the last commit date and returns a human-readable status.
+    Args:
+        last_pushed_at (str): The 'pushed_at' timestamp string from the GitHub API.
+    Returns:
+        str: A string indicating the project's recent activity.
+    """
+    if not last_pushed_at:
+        return "No commits yet"
+    
+    last_pushed_date = datetime.strptime(last_pushed_at, '%Y-%m-%dT%H:%M:%SZ')
+    time_difference = datetime.utcnow() - last_pushed_date
+    
+    if time_difference < timedelta(weeks=1):
+        return "Frequent commits"
+    elif time_difference < timedelta(days=180): # Approx 6 months
+        return "Recent activity"
+    else:
+        return "Low recent activity"
 
 # --- Flask Routes ---
 
@@ -262,6 +283,11 @@ def dashboard():
                 repo['private'] = bool(repo.get('private', False))
                 # Call get_language_percentages for each repo for individual bars
                 repo['language_percentages'] = get_language_percentages(repo['full_name'], request_headers)
+                
+                # --- NEW LOGIC: Determine and add the project activity status ---
+                last_pushed_at = repo.get('pushed_at')
+                repo['activity_status'] = get_project_activity_status(last_pushed_at)
+                # -------------------------------------------------------------
             
             all_repos.extend(data)
             page += 1
