@@ -376,7 +376,7 @@
       padding: 1.5rem; 
       text-align: left;
       transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 4-6px rgba(0,0,0,0.1);
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -529,12 +529,6 @@
       const main = document.getElementById("main-content");
       main.style.display = "flex";
 
-      // Check for 'logged_out' URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('logged_out') === 'true') {
-        displayFlashMessage('You have been logged out.', 'info');
-      }
-
       await sleep(500);
       const ids = [
         "subtitle", "description", "search-form", 
@@ -561,6 +555,12 @@
         document.body.classList.add('light-mode');
       } else {
         document.body.classList.remove('light-mode');
+      }
+
+      // Check for 'logged_out' URL parameter and display flash message
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('logged_out') === 'true') {
+        displayFlashMessage('You have been logged out.', 'info');
       }
 
       // Spinner logic for "View Public Repos" button
