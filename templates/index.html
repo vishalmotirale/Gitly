@@ -130,13 +130,13 @@
     }
 
     .spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #ffffff55;
-      border-top: 3px solid white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #ffffff55;
+        border-top: 3px solid white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
     }
     @keyframes spin {
       to {
@@ -404,9 +404,20 @@
       </button>
     </div>
 
-    <div class="flash-messages-container" id="flash-messages-container">
-      <!-- Flash messages will be dynamically added here by JavaScript or server-side rendering -->
-    </div>
+    {# Flash Messages Display #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages-container">
+          <div style="width: 100%; max-width: 400px;">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }} mb-2">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    {% endwith %}
 
     <div class="logo-container mb-2">
       <h1 id="g-letter">G</h1>
@@ -481,36 +492,12 @@
   <script>
     const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-    /**
-     * Creates and displays a flash message.
-     * @param {string} message - The message to display.
-     * @param {string} category - The category of the message (e.g., 'info', 'success', 'error').
-     */
-    const displayFlashMessage = (message, category) => {
-      const container = document.getElementById('flash-messages-container');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `flash-message ${category} mb-2`;
-      messageDiv.textContent = message;
-      container.appendChild(messageDiv);
-
-      setTimeout(() => {
-        messageDiv.style.opacity = '0';
-        messageDiv.addEventListener('transitionend', () => messageDiv.remove());
-      }, 1500);
-    };
-
     const startMainContent = async () => {
       document.getElementById("loader").style.opacity = 0;
       await sleep(500);
       document.getElementById("loader").style.display = "none";
       const main = document.getElementById("main-content");
       main.style.display = "flex";
-
-      // Check for 'logged_out' URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('logged_out') === 'true') {
-        displayFlashMessage('You have been logged out.', 'info');
-      }
 
       await sleep(500);
       const ids = [
@@ -524,6 +511,14 @@
             el.classList.remove("initial-hidden"); 
             el.classList.add("animate__fadeInUp", "show");
         }
+      });
+
+      // Flash messages fade out after 1.5 seconds
+      document.querySelectorAll('.flash-message').forEach(flashMessage => {
+          setTimeout(() => {
+              flashMessage.style.opacity = '0';
+              flashMessage.addEventListener('transitionend', () => flashMessage.remove());
+          }, 1000); // Updated from 3000ms to 1500ms
       });
     };
 
