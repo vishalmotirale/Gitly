@@ -165,6 +165,7 @@
       border-color: var(--input-border);
       transition: all 0.2s ease-in-out;
       cursor: pointer;
+      padding: 0.5rem 1rem;
     }
 
     #theme-btn button:hover {
@@ -172,6 +173,20 @@
       color: var(--btn-primary);
       border-color: var(--btn-primary);
       box-shadow: 0 0 0 2px rgba(45, 114, 210, 0.2);
+    }
+
+    /* Hide the text on smaller screens */
+    @media (max-width: 768px) {
+      #theme-btn .theme-text {
+        display: none;
+      }
+      #theme-btn button {
+        padding: 0.5rem;
+      }
+      #theme-btn {
+        top: 10px;
+        right: 10px;
+      }
     }
 
     footer {
@@ -382,7 +397,8 @@
   <div id="main-content">
     <div class="position-absolute top-0 end-0 m-3" id="theme-btn">
       <button class="btn btn-outline-primary" onclick="toggleTheme()">
-        🌗 Switch Theme
+        <span class="theme-icon">🌗</span>
+        <span class="theme-text">Switch Theme</span>
       </button>
     </div>
 
