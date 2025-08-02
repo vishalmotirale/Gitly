@@ -476,10 +476,9 @@
                         let message = '';
                         if (diffDays <= 30) {
                             message = `This repo has frequent commits (last commit ${diffDays} days ago).`;
-                        } else if (diffDays > 180) { // 6 months is approx 180 days
-                            message = 'Low recent activity (no commits in 6 months).';
-                        } else {
-                            message = `Last updated: ${lastUpdateDate.toLocaleDateString()}`;
+                        } else { // For any update older than 30 days
+                            const diffMonths = Math.floor(diffDays / 30);
+                            message = `Last commit was ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago.`;
                         }
                         activityElement.textContent = message;
                     }
