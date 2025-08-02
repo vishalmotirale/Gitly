@@ -304,7 +304,7 @@
     /* Flash Messages Styling */
     .flash-messages-container {
       position: absolute;
-      top: 70px; /* Adjusted top position to prevent overlap */
+      top: 20px; /* Adjusted top position to prevent overlap */
       width: 100%;
       display: flex;
       justify-content: center;
@@ -518,7 +518,7 @@
           setTimeout(() => {
               flashMessage.style.opacity = '0';
               flashMessage.addEventListener('transitionend', () => flashMessage.remove());
-          }, 1500); // Updated from 3000ms to 1500ms
+          }, 1000); // Updated from 3000ms to 1500ms
       });
     };
 
