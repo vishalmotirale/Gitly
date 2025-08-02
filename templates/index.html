@@ -23,19 +23,6 @@
       --card-border: #30363d;
       --icon-bg: rgba(45, 114, 210, 0.2);
       --icon-color: #2d72d2;
-      --placeholder-color: #8b949e;
-      --footer-color: #a0aec0;
-      --spinner-border-color: #ffffff55;
-      --spinner-top-border-color: white;
-      --flash-info-bg: #1a202b;
-      --flash-info-text: #58a6ff;
-      --flash-info-border: #58a6ff;
-      --flash-success-bg: #1a2b1a;
-      --flash-success-text: #238636;
-      --flash-success-border: #238636;
-      --flash-error-bg: #2b1a1a;
-      --flash-error-text: #ff7b72;
-      --flash-error-border: #ff7b72;
     }
 
     body.light-mode {
@@ -51,19 +38,6 @@
       --card-border: #e9ecef;
       --icon-bg: rgba(13, 110, 253, 0.1);
       --icon-color: #0d6efd;
-      --placeholder-color: #6c757d;
-      --footer-color: #6c757d;
-      --spinner-border-color: #00000022;
-      --spinner-top-border-color: #0d6efd;
-      --flash-info-bg: #e0f2ff;
-      --flash-info-text: #0d6efd;
-      --flash-info-border: #9ec5fe;
-      --flash-success-bg: #d1e7dd;
-      --flash-success-text: #0f5132;
-      --flash-success-border: #badbcc;
-      --flash-error-bg: #f8d7da;
-      --flash-error-text: #842029;
-      --flash-error-border: #f5c2c7;
     }
 
     body {
@@ -96,6 +70,7 @@
 
     .form-control {
       max-width: 400px;
+      /* Restored original margin */
       margin: 20px auto; 
       background-color: var(--input-bg);
       color: var(--text-color);
@@ -103,7 +78,7 @@
     }
 
     .form-control::placeholder {
-      color: var(--placeholder-color);
+      color: #8b949e;
     }
 
     .form-control:focus {
@@ -121,7 +96,7 @@
     .btn-success {
       background-color: var(--btn-success);
       border: none;
-      color: var(--text-color);
+      color: #fff;
       box-shadow: none;
     }
 
@@ -130,7 +105,7 @@
     .btn-success:active,
     .btn-success:focus:active {
       background-color: var(--btn-success-hover);
-      color: var(--text-color);
+      color: #fff;
       box-shadow: none;
       outline: none;
     }
@@ -158,8 +133,8 @@
       display: inline-block;
       width: 20px;
       height: 20px;
-      border: 3px solid var(--spinner-border-color);
-      border-top: 3px solid var(--spinner-top-border-color);
+      border: 3px solid #ffffff55;
+      border-top: 3px solid white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -218,7 +193,6 @@
     footer {
       font-size: 0.9rem;
       margin-top: auto;
-      color: var(--footer-color);
     }
 
     /* Original 'hidden' class for visibility animation */
@@ -278,24 +252,25 @@
       justify-content: center;
       align-items: baseline;
       gap: 5px;
-      position: relative; 
-      padding-bottom: 5px;
+      position: relative; /* Added for pseudo-element positioning */
+      padding-bottom: 5px; /* Added spacing for the line */
     }
 
+    /* === Reverted CSS for the animated gradient line === */
     .logo-container::after {
       content: '';
       position: absolute;
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 5px; 
+      height: 5px; /* Increased line thickness */
       background: linear-gradient(
         to right,
         rgba(45, 114, 210, 0),
-        rgba(45, 114, 210, 0.5), 
+        rgba(45, 114, 210, 0.5), /* Reverted opacity */
         rgba(45, 114, 210, 0)
       );
-      box-shadow: none; 
+      box-shadow: none; /* Removed the glow effect */
       background-size: 200% 100%;
       animation: gradientLineAnimation 4s linear infinite;
     }
@@ -322,14 +297,14 @@
       flex-direction: column;
       align-items: center;
       width: 100%;
-      padding-top: 5rem; 
+      padding-top: 5rem; /* Increased top padding to push content down */
       flex-grow: 1;
     }
 
     /* Flash Messages Styling */
     .flash-messages-container {
       position: absolute;
-      top: 20px; 
+      top: 20px; /* Adjusted top position to prevent overlap */
       width: 100%;
       display: flex;
       justify-content: center;
@@ -351,21 +326,21 @@
     }
 
     .flash-message.error {
-      background-color: var(--flash-error-bg);
-      color: var(--flash-error-text);
-      border: 1px solid var(--flash-error-border);
+      background-color: #2b1a1a;
+      color: #ff7b72;
+      border: 1px solid #ff7b72;
     }
 
     .flash-message.success {
-      background-color: var(--flash-success-bg);
-      color: var(--flash-success-text);
-      border: 1px solid var(--flash-success-border);
+      background-color: #1a2b1a;
+      color: #238636;
+      border: 1px solid #238636;
     }
 
     .flash-message.info {
-      background-color: var(--flash-info-bg);
-      color: var(--flash-info-text);
-      border: 1px solid var(--flash-info-border);
+      background-color: #1a202b;
+      color: #58a6ff;
+      border: 1px solid #58a6ff;
     }
 
     /* Styles for the new feature cards */
@@ -373,10 +348,10 @@
       background-color: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 0.75rem;
-      padding: 1.5rem; 
+      padding: 1.5rem; /* Restored original padding */
       text-align: left;
       transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-      box-shadow: 0 4-6px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -388,28 +363,30 @@
     }
     .feature-card .icon-container {
       background-color: var(--icon-bg);
-      width: 4rem; 
-      height: 4rem; 
+      width: 4rem; /* Restored original icon container size */
+      height: 4rem; /* Restored original icon container size */
       display: flex;
       justify-content: center;
       align-items: center;
       border-radius: 50%;
-      margin-bottom: 1rem; 
+      margin-bottom: 1rem; /* Adjusted margin */
     }
     .feature-card .icon-container i {
-      font-size: 2rem; 
+      font-size: 2rem; /* Restored original icon size */
       color: var(--icon-color);
     }
     .feature-card h5 {
       font-weight: 600;
-      margin-bottom: 0.5rem; 
+      /* Restored original heading size and removed font-size override */
+      margin-bottom: 0.5rem; /* Restored original margin */
     }
     .feature-card p {
-      color: var(--footer-color);
+      color: #a0aec0;
+      /* Restored original paragraph size and removed font-size override */
       margin-bottom: 0;
     }
     body.light-mode .feature-card p {
-      color: var(--footer-color);
+      color: #6c757d;
     }
   </style>
 </head>
@@ -529,6 +506,12 @@
       const main = document.getElementById("main-content");
       main.style.display = "flex";
 
+      // Check for 'logged_out' URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('logged_out') === 'true') {
+        displayFlashMessage('You have been logged out.', 'info');
+      }
+
       await sleep(500);
       const ids = [
         "subtitle", "description", "search-form", 
@@ -555,14 +538,6 @@
         document.body.classList.add('light-mode');
       } else {
         document.body.classList.remove('light-mode');
-      }
-
-      // Check for 'logged_out' and 'logged_in' URL parameters and display flash messages
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('logged_out') === 'true') {
-        displayFlashMessage('You have been logged out.', 'info');
-      } else if (urlParams.get('logged_in') === 'true') {
-        displayFlashMessage('Successfully logged in with GitHub!', 'success');
       }
 
       // Spinner logic for "View Public Repos" button
