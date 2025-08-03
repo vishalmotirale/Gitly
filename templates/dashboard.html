@@ -192,10 +192,11 @@
       margin-left: 0.5rem;
     }
 
-    /* Language Distribution Bar Styles */
+    /* --- START OF 3D LANGUAGE BAR CSS MODIFICATIONS --- */
     .language-bar-container {
-      width: 100%;
-      height: 8px;
+      /* Replaced `width` and `height` with `max-width` to make it more responsive */
+      max-width: 100%;
+      height: 12px; /* Increased height for a better 3D effect */
       background-color: #30363d;
       border-radius: 4px;
       overflow: hidden;
@@ -203,7 +204,19 @@
       display: flex;
       border: 1px solid var(--border-color);
       flex-shrink: 0;
+      
+      /* New CSS for 3D effect */
+      transform: perspective(500px) rotateX(15deg); /* Add perspective and rotation */
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Add a subtle shadow for depth */
+      transition: transform 0.5s ease, box-shadow 0.5s ease;
     }
+
+    /* Add a hover effect to emphasize the 3D bar */
+    .language-bar-container:hover {
+      transform: perspective(500px) rotateX(0deg);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    }
+
     .language-segment {
       height: 100%;
       display: block;
@@ -242,6 +255,8 @@
       border-style: solid;
       border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
     }
+    /* --- END OF 3D LANGUAGE BAR CSS MODIFICATIONS --- */
+    
     .language-legend {
       display: flex;
       flex-wrap: wrap;
@@ -388,6 +403,7 @@
         </thead>
         <tbody id="activity-logs">
           <!-- Logs will load via JS -->
+          <tr><td colspan="4" class="text-center">Loading activity logs...</td></tr>
         </tbody>
       </table>
     </div>
@@ -474,13 +490,16 @@
   </div>
 
   <script>
-    let originalRepos = [];
+    // Store a reference to the original, unsorted, and unfiltered repository card nodes.
+    // This allows us to re-filter from the original state without manipulating the DOM directly
+    // for every filter change.
+    let originalRepoNodes = [];
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize originalRepos after all .repo-card elements are parsed
-      originalRepos = Array.from(document.querySelectorAll(".repo-card"));
+      // Initialize `originalRepoNodes` with all repo-card elements on initial page load.
+      originalRepoNodes = Array.from(document.querySelectorAll(".repo-card"));
       
-      // Flash messages fade out
+      // Flash messages fade out automatically after 3 seconds.
       document.querySelectorAll('.flash').forEach(flashMessage => {
         setTimeout(() => {
           flashMessage.style.transition = 'opacity 0.5s ease-out';
@@ -489,14 +508,12 @@
         }, 3000);
       });
 
-      // Restore filter state from localStorage on load
+      // Restore filter state from localStorage on load and apply filters.
       restoreFilters();
-      // Apply event listeners to the filter inputs/buttons
       applyEventListeners();
-      // Call filterRepos to ensure initial state is correct
-      filterRepos();
+      filterAndSortRepos(); // Renamed for clarity.
       
-      // Add event listener for CSV export
+      // Add event listener for the CSV export button.
       const exportCSVButton = document.getElementById("exportCSV");
       if (exportCSVButton) {
         exportCSVButton.addEventListener("click", exportToCSV);
@@ -504,209 +521,18 @@
         console.error("Element with ID 'exportCSV' not found.");
       }
 
-      // Apply saved theme on load
+      // Apply saved theme on load.
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
       } else {
         document.body.classList.remove('light-theme');
       }
-      // Fetch dynamic content via APIs
+
+      // Fetch dynamic content from APIs.
       fetchAiInsights();
       fetchActivityLogs();
     });
-    /**
-     * Fetches and displays AI insights from the backend API.
-     */
-    function fetchAiInsights() {
-      // Assuming 'user.login' is available from the template
-      const userLogin = '{{ user.login }}';
-      const container = document.getElementById('ai-insights-container');
-      if (!container) {
-        console.error("AI insights container not found.");
-        return;
-      }
-
-      // API call to fetch insights
-      fetch(`/api/ai_insights/${userLogin}/all`)
-        .then(res => res.ok ? res.json() : Promise.reject('API request failed'))
-        .then(data => {
-          if (data.length) {
-            container.innerHTML = data.map(ins => `<p>💡 ${ins.insight} <small class="text-muted">(${ins.created_at})</small></p>`).join('');
-          } else {
-            container.innerHTML = "<p>No AI insights found.</p>";
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching AI insights:", error);
-          container.innerHTML = "<p class='text-danger'>Error loading AI insights.</p>";
-        });
-    }
-
-    /**
-     * Fetches and displays recent activity logs from the backend API.
-     */
-    function fetchActivityLogs() {
-      const tbody = document.getElementById('activity-logs');
-      if (!tbody) {
-        console.error("Activity logs table body not found.");
-        return;
-      }
-
-      // API call to fetch logs
-      fetch('/api/activity_logs')
-        .then(res => res.ok ? res.json() : Promise.reject('API request failed'))
-        .then(logs => {
-          if (logs.length) {
-            tbody.innerHTML = logs.map(log => `
-              <tr>
-                <td>${log.username}</td>
-                <td>${log.ip_address}</td>
-                <td>${log.path}</td>
-                <td>${log.created_at}</td>
-              </tr>
-            `).join('');
-          } else {
-            tbody.innerHTML = "<tr><td colspan='4' class='text-center'>No activity logs found.</td></tr>";
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching activity logs:", error);
-          tbody.innerHTML = "<tr><td colspan='4' class='text-center text-danger'>Error loading activity logs.</td></tr>";
-        });
-    }
-
-    /**
-     * Applies event listeners to filter controls.
-     */
-    function applyEventListeners() {
-      // Add null checks before adding event listeners
-      const langFilterElement = document.getElementById("langFilter");
-      if (langFilterElement) langFilterElement.addEventListener("change", filterRepos);
-
-      const starFilterElement = document.getElementById("starFilter");
-      if (starFilterElement) starFilterElement.addEventListener("change", filterRepos);
-
-      const visibilityFilterElement = document.getElementById("visibilityFilter");
-      if (visibilityFilterElement) visibilityFilterElement.addEventListener("change", filterRepos);
-
-      const searchInputElement = document.getElementById("searchInput");
-      if (searchInputElement) searchInputElement.addEventListener("input", filterRepos);
-    }
-
-    /**
-     * Restores filter state from localStorage on page load.
-     */
-    function restoreFilters() {
-      const langFilterElement = document.getElementById("langFilter");
-      if (langFilterElement) langFilterElement.value = localStorage.getItem("lang") || "";
-
-      const starFilterElement = document.getElementById("starFilter");
-      if (starFilterElement) starFilterElement.value = localStorage.getItem("stars") || "";
-
-      const visibilityFilterElement = document.getElementById("visibilityFilter");
-      if (visibilityFilterElement) visibilityFilterElement.value = localStorage.getItem("visibility") || "all";
-
-      const searchInputElement = document.getElementById("searchInput");
-      if (searchInputElement) searchInputElement.value = localStorage.getItem("search") || "";
-    }
-
-    /**
-     * Filters and sorts the repositories based on user input.
-     */
-    function filterRepos() {
-      const lang = document.getElementById("langFilter")?.value.toLowerCase() || "";
-      const starsSort = document.getElementById("starFilter")?.value || "";
-      const visibility = document.getElementById("visibilityFilter")?.value || "all";
-      const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
-
-      // Save filter states to localStorage
-      localStorage.setItem("lang", lang);
-      localStorage.setItem("stars", starsSort);
-      localStorage.setItem("visibility", visibility);
-      localStorage.setItem("search", search);
-
-      let filtered = originalRepos.filter(repo => {
-        const langAttr = repo.getAttribute("data-lang")?.toLowerCase() || "";
-        const isPrivate = repo.getAttribute("data-private") === "true";
-        const name = repo.querySelector("h3 a")?.textContent.toLowerCase() || "";
-        
-        const langMatch = !lang || langAttr === lang;
-        const visibilityMatch = visibility === "all" || (visibility === "private" === isPrivate);
-        const searchMatch = !search || name.includes(search);
-
-        return langMatch && visibilityMatch && searchMatch;
-      });
-
-      // Sort by stars
-      if (starsSort) {
-          filtered.sort((a, b) => {
-              const sa = parseInt(a.getAttribute("data-stars")) || 0;
-              const sb = parseInt(b.getAttribute("data-stars")) || 0;
-              return starsSort === "asc" ? sa - sb : sb - sa;
-          });
-      }
-
-      // Update the DOM
-      const container = document.querySelector(".repos");
-      if (container) {
-        container.innerHTML = "";
-        if (filtered.length === 0) {
-          container.innerHTML = `<p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>`;
-        } else {
-          filtered.forEach(r => container.appendChild(r));
-          // After appending, update the activity status for the new elements
-          updateAllActivityStatus();
-        }
-      } else {
-        console.error("Element with class 'repos' (container) not found.");
-      }
-
-      // Update repo count display
-      const repoCountNumberElement = document.getElementById("repoCountNumber");
-      if (repoCountNumberElement) {
-        repoCountNumberElement.textContent = filtered.length;
-      } else {
-        console.error("Element with ID 'repoCountNumber' not found.");
-      }
-    }
-
-    /**
-     * Exports the currently displayed repositories to a CSV file.
-     * This version is more robust, using data attributes instead of text parsing.
-     */
-    function exportToCSV() {
-      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
-      const repos = document.querySelectorAll(".repo-card");
-      repos.forEach(repo => {
-        const name = repo.querySelector("h3 a")?.textContent.trim() || "";
-        const description = repo.querySelector("p:first-of-type")?.textContent.trim() || "";
-        const stars = repo.getAttribute("data-stars") || "0";
-        const forks = repo.getAttribute("data-forks") || "0";
-        const language = repo.getAttribute("data-lang") || "N/A";
-        const updated = repo.getAttribute('data-updated-at')?.substring(0, 10) || "";
-        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
-
-        rows.push([name, description, stars, forks, language, updated, isPrivate]);
-      });
-
-      // Generate CSV string
-      const csv = rows.map(e => e.map(v => {
-        // Escape double quotes inside a field by replacing them with two double quotes
-        const escaped = String(v).replace(/"/g, '""');
-        // Enclose each field in double quotes to handle commas
-        return `"${escaped}"`;
-      }).join(",")).join("\n");
-
-      // Create and download CSV file
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "github_repositories.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
 
     /**
      * Toggles the light/dark theme and saves the preference to localStorage.
@@ -723,7 +549,135 @@
     }
 
     /**
-     * Calculates the time difference and returns a human-readable string.
+     * Applies event listeners to filter controls.
+     */
+    function applyEventListeners() {
+      // Get all filter elements
+      const langFilterElement = document.getElementById("langFilter");
+      const starFilterElement = document.getElementById("starFilter");
+      const visibilityFilterElement = document.getElementById("visibilityFilter");
+      const searchInputElement = document.getElementById("searchInput");
+
+      // Check for existence and add event listeners
+      if (langFilterElement) langFilterElement.addEventListener("change", filterAndSortRepos);
+      if (starFilterElement) starFilterElement.addEventListener("change", filterAndSortRepos);
+      if (visibilityFilterElement) visibilityFilterElement.addEventListener("change", filterAndSortRepos);
+      if (searchInput) searchInputElement.addEventListener("input", filterAndSortRepos);
+    }
+
+    /**
+     * Restores filter state from localStorage on page load.
+     */
+    function restoreFilters() {
+      // Retrieve and set values for each filter from localStorage.
+      document.getElementById("langFilter").value = localStorage.getItem("lang") || "";
+      document.getElementById("starFilter").value = localStorage.getItem("stars") || "";
+      document.getElementById("visibilityFilter").value = localStorage.getItem("visibility") || "all";
+      document.getElementById("searchInput").value = localStorage.getItem("search") || "";
+    }
+
+    /**
+     * Filters and sorts the repositories based on user input, and then updates the DOM.
+     * This function now acts as the central control for all filtering and sorting logic.
+     */
+    function filterAndSortRepos() {
+      // Get current filter values.
+      const lang = document.getElementById("langFilter")?.value.toLowerCase() || "";
+      const starsSort = document.getElementById("starFilter")?.value || "";
+      const visibility = document.getElementById("visibilityFilter")?.value || "all";
+      const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+
+      // Save the current filter states to localStorage.
+      localStorage.setItem("lang", lang);
+      localStorage.setItem("stars", starsSort);
+      localStorage.setItem("visibility", visibility);
+      localStorage.setItem("search", search);
+
+      // Filter the `originalRepoNodes` array.
+      let filteredNodes = originalRepoNodes.filter(repo => {
+        const langAttr = repo.getAttribute("data-lang")?.toLowerCase() || "";
+        const isPrivate = repo.getAttribute("data-private") === "true";
+        const name = repo.querySelector("h3 a")?.textContent.toLowerCase() || "";
+        
+        const langMatch = !lang || langAttr === lang;
+        const visibilityMatch = visibility === "all" || (visibility === "private") === isPrivate;
+        const searchMatch = !search || name.includes(search);
+
+        return langMatch && visibilityMatch && searchMatch;
+      });
+
+      // Sort the filtered nodes based on star count.
+      if (starsSort) {
+        filteredNodes.sort((a, b) => {
+          const sa = parseInt(a.getAttribute("data-stars")) || 0;
+          const sb = parseInt(b.getAttribute("data-stars")) || 0;
+          return starsSort === "asc" ? sa - sb : sb - sa;
+        });
+      }
+
+      // Update the DOM with the filtered and sorted nodes.
+      const container = document.getElementById("reposContainer");
+      if (container) {
+        container.innerHTML = ""; // Clear existing content.
+        if (filteredNodes.length === 0) {
+          container.innerHTML = `<p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories match the current filters.</p>`;
+        } else {
+          filteredNodes.forEach(node => container.appendChild(node));
+        }
+      } else {
+        console.error("Element with ID 'reposContainer' not found.");
+      }
+
+      // Update the repository count display.
+      const repoCountNumberElement = document.getElementById("repoCountNumber");
+      if (repoCountNumberElement) {
+        repoCountNumberElement.textContent = filteredNodes.length;
+      } else {
+        console.error("Element with ID 'repoCountNumber' not found.");
+      }
+
+      // Update the activity status for the newly rendered (or re-ordered) cards.
+      updateAllActivityStatus();
+    }
+
+    /**
+     * Exports the currently displayed repositories to a CSV file.
+     */
+    function exportToCSV() {
+      // This is a robust implementation using data attributes for reliability.
+      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
+      const repos = document.querySelectorAll(".repo-card");
+      repos.forEach(repo => {
+        const name = repo.querySelector("h3 a")?.textContent.trim() || "";
+        const description = repo.querySelector("p:first-of-type")?.textContent.trim() || "";
+        const stars = repo.getAttribute("data-stars") || "0";
+        const forks = repo.getAttribute("data-forks") || "0";
+        const language = repo.getAttribute("data-lang") || "N/A";
+        const updated = repo.getAttribute('data-updated-at')?.substring(0, 10) || "";
+        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
+
+        rows.push([name, description, stars, forks, language, updated, isPrivate]);
+      });
+
+      const csv = rows.map(e => e.map(v => {
+        // Escape double quotes inside a field by replacing them with two double quotes
+        const escaped = String(v).replace(/"/g, '""');
+        // Enclose each field in double quotes to handle commas
+        return `"${escaped}"`;
+      }).join(",")).join("\n");
+
+      // Create and download CSV file.
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "github_repositories.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    /**
+     * Calculates the time difference and returns a human-readable string based on the rules.
      * @param {string} lastUpdate The ISO 8601 timestamp of the last update.
      * @returns {string} The formatted activity status string.
      */
@@ -732,18 +686,15 @@
       const now = new Date();
       const updatedDate = new Date(lastUpdate);
       const diffInMilliseconds = now - updatedDate;
-      const diffInSeconds = Math.floor(diffInMilliseconds / 1000);
-      const diffInMinutes = Math.floor(diffInSeconds / 60);
-      const diffInHours = Math.floor(diffInMinutes / 60);
-      const diffInDays = Math.floor(diffInHours / 24);
-      const diffInMonths = Math.floor(diffInDays / 30.44); // Average days in a month
+      const diffInDays = Math.floor(diffInMilliseconds / (1000 * 60 * 60 * 24));
 
       if (diffInDays === 0) {
-        return "Updated today";
-      } else if (diffInDays <= 30) {
-        return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+        return "This repo has frequent commits (last commit Today)";
+      } else if (diffInDays > 0 && diffInDays <= 30) {
+        return `This repo has frequent commits (last commit ${diffInDays} day${diffInDays > 1 ? 's' : ''} ago)`;
       } else {
-        return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+        const diffInMonths = Math.floor(diffInDays / 30); // Simplified month calculation.
+        return `Low recent activity (no commits in ${diffInMonths} month${diffInMonths > 1 ? 's' : ''})`;
       }
     }
 
@@ -760,6 +711,64 @@
           container.innerHTML = `<span class="badge bg-secondary">${statusText}</span>`;
         }
       });
+    }
+
+    /**
+     * Fetches and displays AI insights from the backend API.
+     */
+    async function fetchAiInsights() {
+      const userLogin = '{{ user.login }}';
+      const container = document.getElementById('ai-insights-container');
+      if (!container) return console.error("AI insights container not found.");
+
+      try {
+        const response = await fetch(`/api/ai_insights/${userLogin}/all`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (data.length) {
+          container.innerHTML = data.map(ins => `<p>💡 ${ins.insight} <small class="text-muted">(${ins.created_at})</small></p>`).join('');
+        } else {
+          container.innerHTML = "<p>No AI insights found.</p>";
+        }
+      } catch (error) {
+        console.error("Error fetching AI insights:", error);
+        container.innerHTML = "<p class='text-danger'>Error loading AI insights.</p>";
+      }
+    }
+
+    /**
+     * Fetches and displays recent activity logs from the backend API.
+     */
+    async function fetchActivityLogs() {
+      const tbody = document.getElementById('activity-logs');
+      if (!tbody) return console.error("Activity logs table body not found.");
+
+      try {
+        const response = await fetch('/api/activity_logs');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const logs = await response.json();
+
+        if (logs.length) {
+          tbody.innerHTML = logs.map(log => `
+            <tr>
+              <td>${log.username}</td>
+              <td>${log.ip_address}</td>
+              <td>${log.path}</td>
+              <td>${log.created_at}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = "<tr><td colspan='4' class='text-center'>No activity logs found.</td></tr>";
+        }
+      } catch (error) {
+        console.error("Error fetching activity logs:", error);
+        tbody.innerHTML = "<tr><td colspan='4' class='text-center text-danger'>Error loading activity logs.</td></tr>";
+      }
     }
   </script>
 </body>
