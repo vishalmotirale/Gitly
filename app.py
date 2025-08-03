@@ -1,12 +1,13 @@
-# app.py
 import os
 import requests
 from requests_oauthlib.oauth2_session import OAuth2Session 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from dotenv import load_dotenv
 from oauthlib.oauth2 import MismatchingStateError
 import time
-from datetime import datetime, timedelta # Import for date calculations
+import sqlite3
+import json
+from datetime import datetime, timedelta
 
 # Load environment variables from repos.env
 load_dotenv('repos.env')
@@ -74,6 +75,39 @@ if not client_secret:
     raise EnvironmentError("Missing GITHUB_CLIENT_SECRET environment variable.")
 if not github_pat and not os.getenv('RENDER'):
     print("WARNING: GITHUB_APP_TOKEN not set. Public API requests might hit lower rate limits.")
+
+# --- Database Connection and Setup ---
+DATABASE = 'gitly.db'
+
+def get_db():
+    """
+    Connects to the specified database file.
+    """
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_db(error):
+    """
+    Closes the database connection at the end of the request.
+    """
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+    """
+    Initializes the database from the gitly_schema.sql file.
+    """
+    with app.app_context():
+        db = get_db()
+        # This will create tables from the schema file.
+        with open('gitly_schema.sql', 'r') as f:
+            db.executescript(f.read())
+        print("Database initialized from gitly_schema.sql")
+
 
 # --- Helper Functions ---
 
@@ -180,6 +214,114 @@ def get_project_activity_status(last_pushed_at):
     else:
         return "Low recent activity"
 
+# --- API Endpoints for Database Interaction ---
+
+@app.route('/api/log_activity', methods=['POST'])
+def log_activity_api():
+    """
+    API endpoint to log user activity.
+    Expects a JSON payload with 'username', 'ip_address', 'user_agent', and 'path'.
+    """
+    data = request.json
+    username = data.get('username')
+    ip_address = data.get('ip_address')
+    user_agent = data.get('user_agent')
+    path = data.get('path')
+
+    # Basic input validation
+    if not all([username, ip_address, user_agent, path]):
+        return jsonify({'error': 'Missing required fields in request payload'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO activity_logs (username, ip_address, user_agent, path) VALUES (?, ?, ?, ?)",
+        (username, ip_address, user_agent, path)
+    )
+    db.commit()
+    return jsonify({'message': 'Activity logged successfully'}), 201
+
+@app.route('/api/ai_insights', methods=['POST'])
+def save_ai_insight():
+    """
+    API endpoint to save a new AI-generated insight.
+    Expects a JSON payload with 'username', 'repo_name', and 'insight'.
+    """
+    data = request.json
+    username = data.get('username')
+    repo_name = data.get('repo_name')
+    insight = data.get('insight')
+
+    # Basic input validation
+    if not all([username, repo_name, insight]):
+        return jsonify({'error': 'Missing required fields in request payload'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO ai_insights (username, repo_name, insight) VALUES (?, ?, ?)",
+        (username, repo_name, insight)
+    )
+    db.commit()
+    return jsonify({'message': 'AI insight saved successfully'}), 201
+
+
+@app.route('/api/ai_insights/<username>/<repo_name>', methods=['GET'])
+def get_ai_insights(username, repo_name):
+    """
+    API endpoint to retrieve AI insights for a user.
+    If repo_name == 'all', fetch all insights for that user.
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    if repo_name == "all":
+        cursor.execute(
+            "SELECT insight, created_at FROM ai_insights WHERE username = ?",
+            (username,)
+        )
+    else:
+        cursor.execute(
+            "SELECT insight, created_at FROM ai_insights WHERE username = ? AND repo_name = ?",
+            (username, repo_name)
+        )
+
+    insights = cursor.fetchall()
+    if not insights:
+        return jsonify({'message': 'No insights found'}), 404
+
+    insights_list = [dict(insight) for insight in insights]
+    return jsonify(insights_list), 200
+
+    if not insights:
+        return jsonify({'message': 'No insights found for this repository'}), 404
+
+    # Convert the list of Row objects to a list of dictionaries for JSON serialization
+    insights_list = [dict(insight) for insight in insights]
+    return jsonify(insights_list), 200
+
+@app.route('/api/cached_repos/<user_id>/<repo_full_name>', methods=['GET'])
+def get_cached_repo(user_id, repo_full_name):
+    """
+    Retrieves cached repository data for a given user and repository from the 'cached_repos' table.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT repo_data, last_updated FROM cached_repos WHERE user_id = ? AND repo_full_name = ?",
+        (user_id, repo_full_name,)
+    )
+    repo_row = cursor.fetchone()
+
+    if not repo_row:
+        return jsonify({'message': 'Repository not found in cache'}), 404
+
+    # The repo_data is stored as a JSON string, so we need to parse it back into an object
+    repo_data = json.loads(repo_row['repo_data'])
+    last_updated = repo_row['last_updated']
+    return jsonify({'repo_data': repo_data, 'last_updated': last_updated}), 200
+
+
 # --- Flask Routes ---
 
 @app.route('/', methods=['GET', 'POST'])
@@ -256,6 +398,26 @@ def dashboard():
     if token_to_use:
         request_headers['Authorization'] = f"token {token_to_use}"
 
+    # --- Log activity when dashboard is accessed ---
+    if username or is_authenticated:
+        try:
+            log_data = {
+                'username': username if username else "authenticated_user",
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent'),
+                'path': request.path
+            }
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute(
+                "INSERT INTO activity_logs (username, ip_address, user_agent, path) VALUES (?, ?, ?, ?)",
+                (log_data['username'], log_data['ip_address'], log_data['user_agent'], log_data['path'])
+            )
+            db.commit()
+            print("DEBUG: Logged dashboard visit successfully.")
+        except Exception as e:
+            print(f"ERROR: Failed to log activity: {e}")
+
     try:
         # Fetch user data and repos based on whether a username is provided
         if not username: # Authenticated user viewing their own repos
@@ -284,10 +446,9 @@ def dashboard():
                 # Call get_language_percentages for each repo for individual bars
                 repo['language_percentages'] = get_language_percentages(repo['full_name'], request_headers)
                 
-                # --- NEW LOGIC: Determine and add the project activity status ---
+                # --- Determine and add the project activity status ---
                 last_pushed_at = repo.get('pushed_at')
                 repo['activity_status'] = get_project_activity_status(last_pushed_at)
-                # -------------------------------------------------------------
             
             all_repos.extend(data)
             page += 1
@@ -330,5 +491,6 @@ def not_found(e):
     return render_template("404.html"), 404
 
 if __name__ == "__main__":
+    init_db()
     port = int(os.environ.get("PORT", 1000))
     app.run(host="0.0.0.0", port=port, debug=True)

@@ -1,640 +1,798 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Gitly Dashboard</title>
-    <style id="theme-style">
-        /* Theme variables for easy switching */
-        :root {
-            --bg-color: #0d1117;
-            --text-color: #c9d1d9;
-            --link-color: #58a6ff;
-            --border-color: #30363d;
-            --card-bg: #161b22;
-            --hover-bg: #1c2128;
-        }
-        /* Light theme variables (example, can be expanded) */
-        body.light-theme {
-            --bg-color: #ffffff;
-            --text-color: #24292f;
-            --link-color: #0969da;
-            --border-color: #d0d7de;
-            --card-bg: #f6f8fa;
-            --hover-bg: #eaeef2;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gitly Dashboard</title>
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            transition: background-color 0.3s, color 0.3s; /* Smooth theme transition */
-        }
-        .container {
-            max-width: 960px;
-            margin: auto;
-            padding: 2rem;
-        }
-        .top-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .theme-toggle button,
-        .logout-btn {
-            background-color: transparent;
-            color: var(--link-color);
-            border: 1px solid var(--link-color); /* Reverted border thickness */
-            padding: 8px 16px; /* Reverted padding */
-            border-radius: 5px; /* Reverted border-radius */
-            cursor: pointer;
-            font-size: 0.9rem; /* Reverted font size */
-            transition: all 0.3s ease; /* Unified transition for all properties */
-            text-decoration: none;
-            box-shadow: none; /* Removed box-shadow from base state */
-        }
+  <!-- External Stylesheets and Scripts -->
+  <!-- Bootstrap 5 CSS for utility classes and grid layout -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <!-- Chart.js for the language distribution chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        .theme-toggle button:hover,
-        .logout-btn:hover {
-            background-color: var(--hover-bg); /* Reverted hover background */
-            border-color: var(--hover-bg); /* Reverted hover border color */
-            color: var(--text-color); /* Reverted hover text color */
-            box-shadow: none; /* Removed box-shadow from hover state */
-            transform: translateY(-3px); /* Re-added subtle lift effect */
-        }
+  <style id="theme-style">
+    /* Theme variables for easy switching */
+    :root {
+      --bg-color: #0d1117;
+      --text-color: #c9d1d9;
+      --link-color: #58a6ff;
+      --border-color: #30363d;
+      --card-bg: #161b22;
+      --hover-bg: #1c2128;
+    }
+    /* Light theme variables */
+    body.light-theme {
+      --bg-color: #ffffff;
+      --text-color: #24292f;
+      --link-color: #0969da;
+      --border-color: #d0d7de;
+      --card-bg: #f6f8fa;
+      --hover-bg: #eaeef2;
+    }
 
-        .profile {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .profile img {
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            border: 3px solid var(--border-color);
-        }
-        .profile h1 {
-            margin: 0.5rem 0;
-            color: var(--link-color);
-        }
-        .profile .bio {
-            font-style: italic;
-            color: var(--text-color);
-            opacity: 0.8;
-            margin-bottom: 0.5rem;
-        }
-        .profile .meta {
-            font-size: 0.9em;
-            color: var(--text-color);
-            opacity: 0.7;
-        }
-        .profile .stats {
-            margin-top: 0.5rem;
-            font-size: 0.95em;
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s, color 0.3s; /* Smooth theme transition */
+    }
+    .container {
+      max-width: 960px;
+      margin: auto;
+      padding: 2rem;
+    }
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .theme-toggle button,
+    .logout-btn {
+      background-color: transparent;
+      color: var(--link-color);
+      border: 1px solid var(--link-color);
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      box-shadow: none;
+    }
+    .theme-toggle button:hover,
+    .logout-btn:hover {
+      background-color: var(--hover-bg);
+      border-color: var(--hover-bg);
+      color: var(--text-color);
+      box-shadow: none;
+      transform: translateY(-3px);
+    }
 
-        .filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem; /* Slightly increased gap for better spacing */
-            justify-content: center;
-            margin-bottom: 1.5rem; /* Increased margin for more separation */
-        }
-        .filters input, .filters select, .filters button {
-            padding: 10px 15px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 6px;
-            font-size: 0.9rem;
-            flex-grow: 1; /* Allow items to grow to fill space */
-            max-width: 250px; /* Max width for filter inputs/selects */
-        }
-        .filters input::placeholder {
-            color: var(--text-color);
-            opacity: 0.7;
-        }
+    .profile {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .profile img {
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      border: 3px solid var(--border-color);
+    }
+    .profile h1 {
+      margin: 0.5rem 0;
+      color: var(--link-color);
+    }
+    .profile .bio {
+      font-style: italic;
+      color: var(--text-color);
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+    }
+    .profile .meta {
+      font-size: 0.9em;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+    .profile .stats {
+      margin-top: 0.5rem;
+      font-size: 0.95em;
+    }
 
-        .filters button {
-            cursor: pointer;
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
-        }
-        .filters button:hover {
-            background-color: var(--link-color);
-            color: white;
-            border-color: var(--link-color);
-        }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .filters input, .filters select, .filters button {
+      padding: 10px 15px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      flex-grow: 1;
+      max-width: 250px;
+    }
+    .filters input::placeholder {
+      color: var(--text-color);
+      opacity: 0.7;
+    }
 
-        #repoCount {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: var(--text-color);
-        }
+    .filters button {
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .filters button:hover {
+      background-color: var(--link-color);
+      color: white;
+      border-color: var(--link-color);
+    }
 
-        .repos {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem; /* Increased gap between repo cards */
-        }
+    #repoCount {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--text-color);
+    }
 
-        .repo {
-            background-color: var(--card-bg);
-            padding: 1rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex; /* Use flexbox for internal layout */
-            flex-direction: column;
-            justify-content: space-between; /* Push language bar to bottom */
-        }
-        .repo:hover {
-            border-color: var(--link-color);
-            box-shadow: 0 0 12px 2px rgba(88, 166, 255, 0.3);
-            transform: translateY(-5px); /* Subtle lift effect */
-            background-color: var(--hover-bg);
-        }
-        .repo h3 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-        }
-        .repo h3 a {
-            color: var(--link-color);
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.15rem;
-        }
-        .repo p {
-            font-size: 0.9rem;
-            color: var(--text-color);
-            line-height: 1.4;
-            margin-bottom: 0.5rem;
-        }
-        .repo p:last-of-type { /* Adjust margin for last paragraph */
-            margin-bottom: 0;
-        }
-        .private-badge {
-            background-color: #6a0000;
-            color: #ff7b72;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            float: right;
-            margin-left: 0.5rem; /* Add some space next to title */
-        }
+    .repos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
 
-        /* Language Distribution Bar Styles - Copied from previous dashboard-html-language-dist */
-        .language-bar-container { /* Renamed from .language-bar for consistency with previous immersive */
-            width: 100%;
-            height: 8px; /* Height of the bar */
-            background-color: #30363d; /* Background for empty/unrecognized parts */
-            border-radius: 4px;
-            overflow: hidden; /* Ensures rounded corners apply to inner segments */
-            margin-top: 0.75rem; /* Space above the bar (adjusted for new layout) */
-            display: flex; /* Makes segments align horizontally */
-            border: 1px solid var(--border-color); /* Add a subtle border to the bar */
-            flex-shrink: 0; /* Prevent it from shrinking */
-        }
-        .language-segment {
-            height: 100%;
-            display: block;
-            position: relative; /* For tooltip positioning */
-            transition: width 0.3s ease-in-out;
-        }
-        .language-segment:hover .language-tooltip {
-            visibility: visible;
-            opacity: 1;
-            transform: translateX(-50%) translateY(-10px);
-        }
-        .language-tooltip {
-            visibility: hidden;
-            opacity: 0;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            text-align: center;
-            border-radius: 4px;
-            padding: 5px 8px;
-            position: absolute;
-            z-index: 1;
-            bottom: 120%; /* Position above the segment */
-            left: 50%;
-            transform: translateX(-50%) translateY(0);
-            transition: opacity 0.3s, transform 0.3s;
-            white-space: nowrap; /* Keep text on one line */
-            font-size: 0.75rem;
-        }
-        .language-tooltip::after {
-            content: "";
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-        }
+    .repo-card {
+      background-color: var(--card-bg);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .repo-card:hover {
+      border-color: var(--link-color);
+      box-shadow: 0 0 12px 2px rgba(88, 166, 255, 0.3);
+      transform: translateY(-5px);
+      background-color: var(--hover-bg);
+    }
+    .repo-card h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+    .repo-card h3 a {
+      color: var(--link-color);
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.15rem;
+    }
+    .repo-card p {
+      font-size: 0.9rem;
+      color: var(--text-color);
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+    .repo-card p:last-of-type {
+      margin-bottom: 0;
+    }
+    .private-badge {
+      background-color: #6a0000;
+      color: #ff7b72;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      float: right;
+      margin-left: 0.5rem;
+    }
 
-        /* Language legend styling */
-        .language-legend {
-            display: flex;
-            flex-wrap: wrap; /* Allow items to wrap */
-            gap: 10px; /* Space between language items */
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-            color: var(--text-color);
-        }
+    /* Language Distribution Bar Styles */
+    .language-bar-container {
+      width: 100%;
+      height: 8px;
+      background-color: #30363d;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+      display: flex;
+      border: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+    .language-segment {
+      height: 100%;
+      display: block;
+      position: relative;
+      transition: width 0.3s ease-in-out;
+    }
+    .language-segment:hover .language-tooltip {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(-50%) translateY(-10px);
+    }
+    .language-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      text-align: center;
+      border-radius: 4px;
+      padding: 5px 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 120%;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      transition: opacity 0.3s, transform 0.3s;
+      white-space: nowrap;
+      font-size: 0.75rem;
+    }
+    .language-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+    }
+    .language-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-color);
+    }
+    .language-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .language-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    /* Flash messages styling */
+    .flash-messages {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: fit-content;
+      max-width: 80%;
+    }
+    .flash {
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      opacity: 0.95;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .flash.success {
+      background-color: #28a745;
+      color: white;
+    }
+    .flash.error {
+      background-color: #dc3545;
+      color: white;
+    }
+    .flash.info {
+      background-color: #007bff;
+      color: white;
+    }
+    /* AI Panel and Activity Log styling */
+    .section-title {
+      font-weight: 600;
+      margin: 20px 0 10px;
+    }
+    .ai-panel {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+    }
+    .chart-container {
+      max-width: 400px;
+      margin: auto;
+    }
+    .table-responsive {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    .table {
+      color: var(--text-color);
+    }
 
-        .language-item {
-            display: flex;
-            align-items: center;
-            gap: 4px; /* Space between color dot and text */
-        }
-
-        .language-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            /* Background color set inline */
-        }
-
-        /* Flash messages styling */
-        .flash-messages {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: fit-content;
-            max-width: 80%;
-        }
-        .flash {
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            opacity: 0.95;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .flash.success {
-            background-color: #28a745; /* Green */
-            color: white;
-        }
-        .flash.error {
-            background-color: #dc3545; /* Red */
-            color: white;
-        }
-        .flash.info {
-            background-color: #007bff; /* Blue */
-            color: white;
-        }
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            .filters {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .filters input, .filters select, .filters button {
-                max-width: 100%;
-            }
-            .repos {
-                grid-template-columns: 1fr; /* Single column on smaller screens */
-            }
-        }
-    </style>
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filters input, .filters select, .filters button {
+        max-width: 100%;
+      }
+      .repos {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-
-        <div class="top-actions">
-            <div class="theme-toggle">
-                <button onclick="toggleTheme()">🌗 Switch Theme</button>
-            </div>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
-        </div>
-
-        <div class="profile">
-            <img src="{{ user.avatar_url }}" alt="User Avatar">
-            <h1>{{ user.name or user.login }}</h1>
-            <p class="bio">{{ user.bio or 'No bio available' }}</p>
-            <p class="meta">📍 {{ user.location or 'Unknown' }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
-            <div class="stats">
-                {% if is_authenticated and not request.args.get('username') %}
-                    📦 Total Repositories: <strong>{{ user.total_repos }}</strong><br>
-                {% else %}
-                    📦 Total Public Repositories: <strong>{{ user.public_repos }}</strong><br>
-                {% endif %}
-                🔗 <a href="{{ user.html_url }}" target="_blank" style="color: var(--link-color); text-decoration: none">Visit GitHub Profile →</a>
-            </div>
-        </div>
-
-        <div class="filters">
-            <input type="text" id="searchInput" placeholder="Search repositories...">
-            <select id="langFilter">
-                <option value="">All Languages</option>
-                {# Collect unique languages from repos passed by Flask #}
-                {% set all_languages = [] %}
-                {% for repo in repos %}
-                    {% if repo.language %}
-                        {% set _ = all_languages.append(repo.language) %}
-                    {% endif %}
-                {% endfor %}
-                {# Sort and display unique languages #}
-                {% for lang in all_languages|unique|sort %}
-                    <option value="{{ lang }}">{{ lang }}</option>
-                {% endfor %}
-            </select>
-            <select id="starFilter">
-                <option value="">Sort By</option>
-                <option value="asc">Stars ↑</option>
-                <option value="desc">Stars ↓</option>
-            </select>
-            <select id="visibilityFilter">
-                <option value="all">All Repositories</option>
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-            </select>
-            <button id="exportCSV">Export CSV</button>
-        </div>
-
-        <div id="repoCount">
-            Showing <span id="repoCountNumber">{{ repos|length }}</span> repositories
-        </div>
-
-        <div class="repos" id="reposContainer">
-            {% for repo in repos %}
-                <div class="repo" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}" data-updated-at="{{ repo.updated_at }}">
-                    <h3>
-                        <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
-                        {% if repo.private %}<span class="private-badge">Private</span>{% endif %}
-                    </h3>
-                    <p>{{ repo.description or 'No description' }}</p>
-                    <p>⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or 'N/A' }}</p>
-
-                    <!-- NEW: Project Activity Insight -->
-                    <p class="activity-insight"></p>
-
-                    {# Language Bar #}
-                    {% if repo.language_percentages %}
-                        <div class="language-bar-container">
-                            {% for lang, percent in repo.language_percentages.items() %}
-                                <div class="language-segment" style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%">
-                                    <span class="language-tooltip">{{ lang }}: {{ percent }}%</span>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        {# Language Legend below the bar #}
-                        <div class="language-legend">
-                            {% for lang, percent in repo.language_percentages.items() %}
-                                <span class="language-item">
-                                    <span class="language-dot" style="background-color: {{ language_colors.get(lang, '#999') }};"></span>
-                                    {{ lang }} {{ percent }}%
-                                </span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-            {# This message is now inside the .repos container, so it will display when repos list is empty #}
-            {% if not repos %}
-                <p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>
-            {% endif %}
-        </div>
+  <div class="container">
+    <!-- Flash messages -->
+    <div class="flash-messages">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
     </div>
 
-    <script>
-        let originalRepos = [];
+    <!-- Top actions -->
+    <div class="top-actions">
+      <div class="theme-toggle">
+        <button onclick="toggleTheme()">🌗 Switch Theme</button>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
 
-        document.addEventListener("DOMContentLoaded", () => {
-            // Initialize originalRepos after all .repo elements are parsed
-            // This will be empty if no repos are rendered, but the container will exist.
-            originalRepos = Array.from(document.querySelectorAll(".repo"));
-            
-            // Flash messages fade out
-            document.querySelectorAll('.flash').forEach(flashMessage => {
-                setTimeout(() => {
-                    flashMessage.style.transition = 'opacity 0.5s ease-out';
-                    flashMessage.style.opacity = '0';
-                    flashMessage.addEventListener('transitionend', () => flashMessage.remove());
-                }, 3000); // Message disappears after 3 seconds
-            });
+    <!-- User Profile Section -->
+    <div class="profile">
+      <img src="{{ user.avatar_url }}" alt="User Avatar">
+      <h1>{{ user.name or user.login }}</h1>
+      <p class="bio">{{ user.bio or 'No bio available' }}</p>
+      <p class="meta">📍 {{ user.location or 'Unknown' }} • 👥 {{ user.followers }} followers • {{ user.following }} following</p>
+      <div class="stats">
+        {% if is_authenticated and not request.args.get('username') %}
+        📦 Total Repositories: <strong>{{ user.total_repos }}</strong><br>
+        {% else %}
+        📦 Total Public Repositories: <strong>{{ user.public_repos }}</strong><br>
+        {% endif %}
+        🔗 <a href="{{ user.html_url }}" target="_blank" style="color: var(--link-color); text-decoration: none">Visit GitHub Profile →</a>
+      </div>
+    </div>
 
-            restoreFilters();
-            applyEventListeners();
-            // Call filterRepos to ensure initial state is correct, even if originalRepos is empty
-            filterRepos();
-            addActivityInsights(); // Call the new function to add the insights
+    <!-- Overall Language Distribution Chart -->
+    <h5 class="section-title">Overall Language Distribution</h5>
+    <div class="chart-container mb-4">
+      <canvas id="langChart"></canvas>
+    </div>
 
-            const exportCSVButton = document.getElementById("exportCSV");
-            if (exportCSVButton) { // Add null check for the button
-                exportCSVButton.addEventListener("click", exportToCSV);
-            } else {
-                console.error("Element with ID 'exportCSV' not found.");
-            }
+    <!-- AI Insights Panel -->
+    <h5 class="section-title">AI Insights</h5>
+    <div class="ai-panel mb-4" id="ai-insights-container">
+      <p>Loading AI insights...</p>
+    </div>
 
+    <!-- Recent Activity Logs -->
+    <h5 class="section-title">Recent Activity Logs</h5>
+    <div class="table-responsive mb-4">
+      <table class="table table-striped table-bordered">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>IP</th>
+            <th>Path</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="activity-logs">
+          <!-- Logs will load via JS -->
+        </tbody>
+      </table>
+    </div>
 
-            // Apply saved theme on load
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'light') {
-                document.body.classList.add('light-theme');
-            } else {
-                document.body.classList.remove('light-theme');
-            }
-        });
+    <!-- Repository Filters -->
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="Search repositories...">
+      <select id="langFilter">
+        <option value="">All Languages</option>
+        {# Collect unique languages from repos passed by Flask #}
+        {% set all_languages = [] %}
+        {% for repo in repos %}
+        {% if repo.language %}
+        {% set _ = all_languages.append(repo.language) %}
+        {% endif %}
+        {% endfor %}
+        {# Sort and display unique languages #}
+        {% for lang in all_languages|unique|sort %}
+        <option value="{{ lang }}">{{ lang }}</option>
+        {% endfor %}
+      </select>
+      <select id="starFilter">
+        <option value="">Sort By</option>
+        <option value="asc">Stars ↑</option>
+        <option value="desc">Stars ↓</option>
+      </select>
+      <select id="visibilityFilter">
+        <option value="all">All Repositories</option>
+        <option value="public">Public</option>
+        <option value="private">Private</option>
+      </select>
+      <button id="exportCSV">Export CSV</button>
+    </div>
 
-        function addActivityInsights() {
-            const today = new Date();
-            document.querySelectorAll('.repo').forEach(repo => {
-                const updatedAt = repo.getAttribute('data-updated-at');
-                if (updatedAt) {
-                    const lastUpdateDate = new Date(updatedAt);
-                    const diffTime = Math.abs(today - lastUpdateDate);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const activityElement = repo.querySelector('.activity-insight');
-                    
-                    if (activityElement) {
-                        let message = '';
-                        if (diffDays <= 30) {
-                            message = `This repo has frequent commits (last commit ${diffDays} days ago).`;
-                        } else { // For any update older than 30 days
-                            const diffMonths = Math.floor(diffDays / 30);
-                            message = `Last commit was ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago.`;
+    <!-- Repository Count -->
+    <div id="repoCount">
+      Showing <span id="repoCountNumber">{{ repos|length }}</span> repositories
+    </div>
+
+    <!-- Repositories List -->
+    <div class="repos" id="reposContainer">
+      {% for repo in repos %}
+      <div class="repo-card" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-forks="{{ repo.forks_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}" data-updated-at="{{ repo.updated_at }}">
+        <h3>
+          <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
+          {% if repo.private %}<span class="private-badge">Private</span>{% endif %}
+        </h3>
+        <p>{{ repo.description or 'No description' }}</p>
+        <p>
+          ⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or 'N/A' }}
+        </p>
+
+        <!-- Project Activity Insight from the second snippet -->
+        {% if repo.activity_status %}
+        <div class="mt-2">
+          <span class="badge bg-success">{{ repo.activity_status }}</span>
+        </div>
+        {% endif %}
+        
+        {# Language Bar #}
+        {% if repo.language_percentages %}
+        <div class="language-bar-container mt-2">
+          {% for lang, percent in repo.language_percentages.items() %}
+          <div class="language-segment" style="width: {{ percent }}%; background-color: {{ language_colors.get(lang, '#999') }};" title="{{ lang }}: {{ percent }}%">
+            <span class="language-tooltip">{{ lang }}: {{ percent }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        {# Language Legend below the bar #}
+        <div class="language-legend">
+          {% for lang, percent in repo.language_percentages.items() %}
+          <span class="language-item">
+            <span class="language-dot" style="background-color: {{ language_colors.get(lang, '#999') }};"></span>
+            {{ lang }} {{ percent }}%
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {# This message is now inside the .repos container, so it will display when repos list is empty #}
+      {% if not repos %}
+      <p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    let originalRepos = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize originalRepos after all .repo-card elements are parsed
+      originalRepos = Array.from(document.querySelectorAll(".repo-card"));
+      
+      // Flash messages fade out
+      document.querySelectorAll('.flash').forEach(flashMessage => {
+        setTimeout(() => {
+          flashMessage.style.transition = 'opacity 0.5s ease-out';
+          flashMessage.style.opacity = '0';
+          flashMessage.addEventListener('transitionend', () => flashMessage.remove());
+        }, 3000);
+      });
+
+      // Restore filter state from localStorage on load
+      restoreFilters();
+      // Apply event listeners to the filter inputs/buttons
+      applyEventListeners();
+      // Call filterRepos to ensure initial state is correct
+      filterRepos();
+      
+      // Add event listener for CSV export
+      const exportCSVButton = document.getElementById("exportCSV");
+      if (exportCSVButton) {
+        exportCSVButton.addEventListener("click", exportToCSV);
+      } else {
+        console.error("Element with ID 'exportCSV' not found.");
+      }
+
+      // Apply saved theme on load
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+
+      // Initialize Chart.js
+      renderLanguageChart();
+
+      // Fetch dynamic content via APIs
+      fetchAiInsights();
+      fetchActivityLogs();
+    });
+
+    /**
+     * Renders the language distribution pie chart using Chart.js.
+     * Assumes a global variable `overall_language_stats` is populated by the backend.
+     */
+    function renderLanguageChart() {
+      // Safely access the template variable, providing a fallback empty object
+      const langData = {{ overall_language_stats | tojson }} || {};
+      const ctx = document.getElementById('langChart');
+      if (!ctx) {
+        console.error("Chart canvas element with ID 'langChart' not found.");
+        return;
+      }
+      
+      // Use the language_colors from the template if available
+      const languageColors = {{ language_colors | tojson }} || {};
+      const backgroundColors = Object.keys(langData).map(lang => languageColors[lang] || '#999');
+
+      new Chart(ctx.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: Object.keys(langData),
+          datasets: [{
+            data: Object.values(langData),
+            backgroundColor: backgroundColors
+          }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: 'var(--text-color)'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += context.parsed + '%';
+                            }
+                            return label;
                         }
-                        activityElement.textContent = message;
                     }
                 }
-            });
-        }
-
-        function applyEventListeners() {
-            // Add null checks before adding event listeners
-            const langFilterElement = document.getElementById("langFilter");
-            if (langFilterElement) langFilterElement.addEventListener("change", filterRepos);
-
-            const starFilterElement = document.getElementById("starFilter");
-            if (starFilterElement) starFilterElement.addEventListener("change", filterRepos);
-
-            const visibilityFilterElement = document.getElementById("visibilityFilter");
-            if (visibilityFilterElement) visibilityFilterElement.addEventListener("change", filterRepos);
-
-            const searchInputElement = document.getElementById("searchInput");
-            if (searchInputElement) searchInputElement.addEventListener("input", filterRepos);
-        }
-
-        function restoreFilters() {
-            // Added null checks to prevent "Cannot set properties of null" error
-            const langFilterElement = document.getElementById("langFilter");
-            if (langFilterElement) {
-                langFilterElement.value = localStorage.getItem("lang") || "";
-            } else {
-                console.error("Element with ID 'langFilter' not found during restoreFilters.");
-            }
-
-            const starFilterElement = document.getElementById("starFilter");
-            if (starFilterElement) {
-                starFilterElement.value = localStorage.getItem("stars") || "";
-            } else {
-                console.error("Element with ID 'starFilter' not found during restoreFilters.");
-            }
-
-            const visibilityFilterElement = document.getElementById("visibilityFilter");
-            if (visibilityFilterElement) {
-                visibilityFilterElement.value = localStorage.getItem("visibility") || "all";
-            } else {
-                console.error("Element with ID 'visibilityFilter' not found during restoreFilters.");
-            }
-
-            const searchInputElement = document.getElementById("searchInput");
-            if (searchInputElement) {
-                searchInputElement.value = localStorage.getItem("search") || "";
-            } else {
-                console.error("Element with ID 'searchInput' not found during restoreFilters.");
             }
         }
+      });
+    }
 
-        function filterRepos() {
-            const lang = document.getElementById("langFilter")?.value.toLowerCase() || "";
-            const stars = document.getElementById("starFilter")?.value || "";
-            const visibility = document.getElementById("visibilityFilter")?.value || "all";
-            const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+    /**
+     * Fetches and displays AI insights from the backend API.
+     */
+    function fetchAiInsights() {
+      // Assuming 'user.login' is available from the template
+      const userLogin = '{{ user.login }}';
+      const container = document.getElementById('ai-insights-container');
+      if (!container) {
+        console.error("AI insights container not found.");
+        return;
+      }
 
-            // Save filter states to localStorage
-            localStorage.setItem("lang", lang);
-            localStorage.setItem("stars", stars);
-            localStorage.setItem("visibility", visibility);
-            localStorage.setItem("search", search);
+      // API call to fetch insights
+      fetch(`/api/ai_insights/${userLogin}/all`)
+        .then(res => res.ok ? res.json() : Promise.reject('API request failed'))
+        .then(data => {
+          if (data.length) {
+            container.innerHTML = data.map(ins => `<p>💡 ${ins.insight} <small class="text-muted">(${ins.created_at})</small></p>`).join('');
+          } else {
+            container.innerHTML = "<p>No AI insights found.</p>";
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching AI insights:", error);
+          container.innerHTML = "<p class='text-danger'>Error loading AI insights.</p>";
+        });
+    }
 
-            let filtered = originalRepos.filter(repo => {
-                const langAttr = repo.getAttribute("data-lang")?.toLowerCase() || "";
-                const isPrivate = repo.getAttribute("data-private") === "true";
-                // Target the text content of the <a> tag within <h3> for the repo name
-                const name = repo.querySelector("h3 a")?.textContent.toLowerCase() || "";
+    /**
+     * Fetches and displays recent activity logs from the backend API.
+     */
+    function fetchActivityLogs() {
+      const tbody = document.getElementById('activity-logs');
+      if (!tbody) {
+        console.error("Activity logs table body not found.");
+        return;
+      }
 
-                // Apply filters
-                return (!lang || langAttr === lang) &&
-                    (visibility === "all" || (visibility === "private" === isPrivate)) &&
-                    (!search || name.includes(search));
-            });
+      // API call to fetch logs
+      fetch('/api/activity_logs')
+        .then(res => res.ok ? res.json() : Promise.reject('API request failed'))
+        .then(logs => {
+          if (logs.length) {
+            tbody.innerHTML = logs.map(log => `
+              <tr>
+                <td>${log.username}</td>
+                <td>${log.ip_address}</td>
+                <td>${log.path}</td>
+                <td>${log.created_at}</td>
+              </tr>
+            `).join('');
+          } else {
+            tbody.innerHTML = "<tr><td colspan='4' class='text-center'>No activity logs found.</td></tr>";
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching activity logs:", error);
+          tbody.innerHTML = "<tr><td colspan='4' class='text-center text-danger'>Error loading activity logs.</td></tr>";
+        });
+    }
 
-            // Sort by stars
-            filtered.sort((a, b) => {
-                const sa = parseInt(a.getAttribute("data-stars")) || 0;
-                const sb = parseInt(b.getAttribute("data-stars")) || 0;
-                return stars === "asc" ? sa - sb : stars === "desc" ? sb - sa : 0; // 0 means no change in order if stars are equal or no sort applied
-            });
+    /**
+     * Applies event listeners to filter controls.
+     */
+    function applyEventListeners() {
+      // Add null checks before adding event listeners
+      const langFilterElement = document.getElementById("langFilter");
+      if (langFilterElement) langFilterElement.addEventListener("change", filterRepos);
 
-            // Update the DOM
-            const container = document.querySelector(".repos");
-            // Check if container exists before trying to set innerHTML
-            if (container) {
-                container.innerHTML = ""; // Clear existing repos
-                filtered.forEach(r => container.appendChild(r)); // Append filtered/sorted repos
-            } else {
-                console.error("Element with class 'repos' (container) not found during filterRepos.");
-            }
+      const starFilterElement = document.getElementById("starFilter");
+      if (starFilterElement) starFilterElement.addEventListener("change", filterRepos);
 
+      const visibilityFilterElement = document.getElementById("visibilityFilter");
+      if (visibilityFilterElement) visibilityFilterElement.addEventListener("change", filterRepos);
 
-            // Update repo count display
-            const repoCountNumberElement = document.getElementById("repoCountNumber");
-            if (repoCountNumberElement) { // Add null check for repoCountNumber
-                repoCountNumberElement.textContent = filtered.length;
-            } else {
-                console.error("Element with ID 'repoCountNumber' not found during filterRepos.");
-            }
+      const searchInputElement = document.getElementById("searchInput");
+      if (searchInputElement) searchInputElement.addEventListener("input", filterRepos);
+    }
+
+    /**
+     * Restores filter state from localStorage on page load.
+     */
+    function restoreFilters() {
+      const langFilterElement = document.getElementById("langFilter");
+      if (langFilterElement) langFilterElement.value = localStorage.getItem("lang") || "";
+
+      const starFilterElement = document.getElementById("starFilter");
+      if (starFilterElement) starFilterElement.value = localStorage.getItem("stars") || "";
+
+      const visibilityFilterElement = document.getElementById("visibilityFilter");
+      if (visibilityFilterElement) visibilityFilterElement.value = localStorage.getItem("visibility") || "all";
+
+      const searchInputElement = document.getElementById("searchInput");
+      if (searchInputElement) searchInputElement.value = localStorage.getItem("search") || "";
+    }
+
+    /**
+     * Filters and sorts the repositories based on user input.
+     */
+    function filterRepos() {
+      const lang = document.getElementById("langFilter")?.value.toLowerCase() || "";
+      const starsSort = document.getElementById("starFilter")?.value || "";
+      const visibility = document.getElementById("visibilityFilter")?.value || "all";
+      const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+
+      // Save filter states to localStorage
+      localStorage.setItem("lang", lang);
+      localStorage.setItem("stars", starsSort);
+      localStorage.setItem("visibility", visibility);
+      localStorage.setItem("search", search);
+
+      let filtered = originalRepos.filter(repo => {
+        const langAttr = repo.getAttribute("data-lang")?.toLowerCase() || "";
+        const isPrivate = repo.getAttribute("data-private") === "true";
+        const name = repo.querySelector("h3 a")?.textContent.toLowerCase() || "";
+        
+        const langMatch = !lang || langAttr === lang;
+        const visibilityMatch = visibility === "all" || (visibility === "private" === isPrivate);
+        const searchMatch = !search || name.includes(search);
+
+        return langMatch && visibilityMatch && searchMatch;
+      });
+
+      // Sort by stars
+      if (starsSort) {
+          filtered.sort((a, b) => {
+              const sa = parseInt(a.getAttribute("data-stars")) || 0;
+              const sb = parseInt(b.getAttribute("data-stars")) || 0;
+              return starsSort === "asc" ? sa - sb : sb - sa;
+          });
+      }
+
+      // Update the DOM
+      const container = document.querySelector(".repos");
+      if (container) {
+        container.innerHTML = "";
+        if (filtered.length === 0) {
+          container.innerHTML = `<p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>`;
+        } else {
+          filtered.forEach(r => container.appendChild(r));
         }
+      } else {
+        console.error("Element with class 'repos' (container) not found.");
+      }
 
-        function exportToCSV() {
-            const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
-            const repos = document.querySelectorAll(".repo");
-            repos.forEach(repo => {
-                const name = repo.querySelector("h3 a")?.textContent.trim() || "";
-                const description = repo.querySelectorAll("p")[0]?.textContent.trim() || "";
-                const statsParagraph = repo.querySelectorAll("p")[1]?.textContent.trim() || "";
+      // Update repo count display
+      const repoCountNumberElement = document.getElementById("repoCountNumber");
+      if (repoCountNumberElement) {
+        repoCountNumberElement.textContent = filtered.length;
+      } else {
+        console.error("Element with ID 'repoCountNumber' not found.");
+      }
+    }
 
-                // Robust extraction using regex (safer than fixed index)
-                const starsMatch = statsParagraph.match(/⭐ (\d+)/);
-                const stars = starsMatch ? starsMatch[1] : '0';
+    /**
+     * Exports the currently displayed repositories to a CSV file.
+     * This version is more robust, using data attributes instead of text parsing.
+     */
+    function exportToCSV() {
+      const rows = [["Name", "Description", "Stars", "Forks", "Language", "Updated At", "Private"]];
+      const repos = document.querySelectorAll(".repo-card");
+      repos.forEach(repo => {
+        const name = repo.querySelector("h3 a")?.textContent.trim() || "";
+        const description = repo.querySelector("p:first-of-type")?.textContent.trim() || "";
+        const stars = repo.getAttribute("data-stars") || "0";
+        const forks = repo.getAttribute("data-forks") || "0";
+        const language = repo.getAttribute("data-lang") || "N/A";
+        const updated = repo.getAttribute('data-updated-at')?.substring(0, 10) || "";
+        const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
 
-                const forksMatch = statsParagraph.match(/🍴 (\d+)/);
-                const forks = forksMatch ? forksMatch[1] : '0';
+        rows.push([name, description, stars, forks, language, updated, isPrivate]);
+      });
 
-                const languageMatch = statsParagraph.match(/🛠 ([^|]+)/); // Capture language until next '|' or end
-                const language = languageMatch ? languageMatch[1].trim() : 'N/A';
+      // Generate CSV string
+      const csv = rows.map(e => e.map(v => {
+        // Escape double quotes inside a field by replacing them with two double quotes
+        const escaped = String(v).replace(/"/g, '""');
+        // Enclose each field in double quotes to handle commas
+        return `"${escaped}"`;
+      }).join(",")).join("\n");
 
-                const updated = repo.getAttribute('data-updated-at')?.substring(0, 10) || "";
-                const isPrivate = repo.getAttribute("data-private") === "true" ? "Yes" : "No";
+      // Create and download CSV file
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "github_repositories.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
-                rows.push([name, description, stars, forks, language, updated, isPrivate]);
-            });
-
-            // Generate CSV string
-            const csv = rows.map(e => e.map(v => {
-                // Escape double quotes within data by doubling them, then wrap in quotes
-                const escaped = String(v).replace(/"/g, '""');
-                return `"${escaped}"`;
-            }).join(",")).join("\n");
-
-            // Create and download CSV file
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "github_repositories.csv";
-            document.body.appendChild(link); // Append to body is good practice before click
-            link.click();
-            document.body.removeChild(link); // Clean up
-        }
-
-        function toggleTheme() {
-            const body = document.body;
-            body.classList.toggle('light-theme'); // Toggle the light-theme class
-            
-            // Save theme preference to localStorage
-            if (body.classList.contains('light-theme')) {
-                localStorage.setItem('theme', 'light');
-            } else {
-                localStorage.setItem('theme', 'dark');
-            }
-        }
-    </script>
+    /**
+     * Toggles the light/dark theme and saves the preference to localStorage.
+     */
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('light-theme');
+      
+      if (body.classList.contains('light-theme')) {
+        localStorage.setItem('theme', 'light');
+      } else {
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+  </script>
 </body>
 </html>
