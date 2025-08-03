@@ -94,6 +94,7 @@
       font-size: 0.9em;
       color: var(--text-color);
       opacity: 0.7;
+      margin-bottom: 0.5rem;
     }
     .profile .stats {
       margin-top: 0.5rem;
@@ -326,6 +327,16 @@
     }
     .table {
       color: var(--text-color);
+    }
+    /* Fixed styles for text wrapping and overflow */
+    .table-responsive table td,
+    .table-responsive table th {
+      white-space: normal; /* Allow text to wrap */
+      word-break: break-word; /* Break long words */
+      padding: 0.75rem; /* Ensure padding is consistent */
+    }
+    .table-responsive table td:nth-child(3) {
+      max-width: 250px; /* Set a max-width for the path column to prevent it from getting too wide */
     }
 
     /* Responsive adjustments */
