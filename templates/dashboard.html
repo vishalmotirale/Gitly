@@ -8,9 +8,7 @@
   <!-- External Stylesheets and Scripts -->
   <!-- Bootstrap 5 CSS for utility classes and grid layout -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
-  <!-- Chart.js for the language distribution chart -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  
   <style id="theme-style">
     /* Theme variables for easy switching */
     :root {
@@ -307,10 +305,6 @@
       padding: 15px;
       border: 1px solid var(--border-color);
     }
-    .chart-container {
-      max-width: 400px;
-      margin: auto;
-    }
     .table-responsive {
       border: 1px solid var(--border-color);
       border-radius: 8px;
@@ -372,12 +366,6 @@
         {% endif %}
         🔗 <a href="{{ user.html_url }}" target="_blank" style="color: var(--link-color); text-decoration: none">Visit GitHub Profile →</a>
       </div>
-    </div>
-
-    <!-- Overall Language Distribution Chart -->
-    <h5 class="section-title">Overall Language Distribution</h5>
-    <div class="chart-container mb-4">
-      <canvas id="langChart"></canvas>
     </div>
 
     <!-- AI Insights Panel -->
@@ -442,7 +430,7 @@
     <!-- Repositories List -->
     <div class="repos" id="reposContainer">
       {% for repo in repos %}
-      <div class="repo-card" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-forks="{{ repo.forks_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}" data-updated-at="{{ repo.updated_at }}">
+      <div class="repo-card" data-lang="{{ repo.language or '' }}" data-stars="{{ repo.stargazers_count or 0 }}" data-forks="{{ repo.forks_count or 0 }}" data-private="{{ 'true' if repo.private else 'false' }}" data-updated-at="{{ repo.updated_at }}" onclick="window.open('{{ repo.html_url }}', '_blank');">
         <h3>
           <a href="{{ repo.html_url }}" target="_blank">{{ repo.name }}</a>
           {% if repo.private %}<span class="private-badge">Private</span>{% endif %}
@@ -452,12 +440,10 @@
           ⭐ {{ repo.stargazers_count }} | 🍴 {{ repo.forks_count }} | 🛠 {{ repo.language or 'N/A' }}
         </p>
 
-        <!-- Project Activity Insight from the second snippet -->
-        {% if repo.activity_status %}
-        <div class="mt-2">
-          <span class="badge bg-success">{{ repo.activity_status }}</span>
+        <!-- Dynamic Activity Status placeholder -->
+        <div class="mt-2 activity-status-container">
+          <!-- Activity status will be populated here by JavaScript -->
         </div>
-        {% endif %}
         
         {# Language Bar #}
         {% if repo.language_percentages %}
@@ -525,70 +511,10 @@
       } else {
         document.body.classList.remove('light-theme');
       }
-
-      // Initialize Chart.js
-      renderLanguageChart();
-
       // Fetch dynamic content via APIs
       fetchAiInsights();
       fetchActivityLogs();
     });
-
-    /**
-     * Renders the language distribution pie chart using Chart.js.
-     * Assumes a global variable `overall_language_stats` is populated by the backend.
-     */
-    function renderLanguageChart() {
-      // Safely access the template variable, providing a fallback empty object
-      const langData = {{ overall_language_stats | tojson }} || {};
-      const ctx = document.getElementById('langChart');
-      if (!ctx) {
-        console.error("Chart canvas element with ID 'langChart' not found.");
-        return;
-      }
-      
-      // Use the language_colors from the template if available
-      const languageColors = {{ language_colors | tojson }} || {};
-      const backgroundColors = Object.keys(langData).map(lang => languageColors[lang] || '#999');
-
-      new Chart(ctx.getContext('2d'), {
-        type: 'pie',
-        data: {
-          labels: Object.keys(langData),
-          datasets: [{
-            data: Object.values(langData),
-            backgroundColor: backgroundColors
-          }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: 'var(--text-color)'
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                label += context.parsed + '%';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-      });
-    }
-
     /**
      * Fetches and displays AI insights from the backend API.
      */
@@ -729,6 +655,8 @@
           container.innerHTML = `<p style="text-align: center; margin-top: 2rem; color: var(--text-color); width: 100%; grid-column: 1 / -1;">No repositories to display.</p>`;
         } else {
           filtered.forEach(r => container.appendChild(r));
+          // After appending, update the activity status for the new elements
+          updateAllActivityStatus();
         }
       } else {
         console.error("Element with class 'repos' (container) not found.");
@@ -792,6 +720,46 @@
       } else {
         localStorage.setItem('theme', 'dark');
       }
+    }
+
+    /**
+     * Calculates the time difference and returns a human-readable string.
+     * @param {string} lastUpdate The ISO 8601 timestamp of the last update.
+     * @returns {string} The formatted activity status string.
+     */
+    function calculateActivityStatus(lastUpdate) {
+      if (!lastUpdate) return "No activity data";
+      const now = new Date();
+      const updatedDate = new Date(lastUpdate);
+      const diffInMilliseconds = now - updatedDate;
+      const diffInSeconds = Math.floor(diffInMilliseconds / 1000);
+      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      const diffInDays = Math.floor(diffInHours / 24);
+      const diffInMonths = Math.floor(diffInDays / 30.44); // Average days in a month
+
+      if (diffInDays === 0) {
+        return "Updated today";
+      } else if (diffInDays <= 30) {
+        return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+      } else {
+        return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+      }
+    }
+
+    /**
+     * Updates the activity status for all visible repository cards.
+     */
+    function updateAllActivityStatus() {
+      const repos = document.querySelectorAll(".repo-card");
+      repos.forEach(repo => {
+        const updatedAt = repo.getAttribute('data-updated-at');
+        const statusText = calculateActivityStatus(updatedAt);
+        const container = repo.querySelector('.activity-status-container');
+        if (container) {
+          container.innerHTML = `<span class="badge bg-secondary">${statusText}</span>`;
+        }
+      });
     }
   </script>
 </body>
