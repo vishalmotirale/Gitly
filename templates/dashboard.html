@@ -676,9 +676,9 @@
       const diffInDays = Math.floor(diffInMilliseconds / (1000 * 60 * 60 * 24));
 
       if (diffInDays === 0) {
-        return "This repo has frequent commits (last commit Today)";
+        return "Frequent commits (last commit Today)";
       } else if (diffInDays > 0 && diffInDays <= 30) {
-        return `This repo has frequent commits (last commit ${diffInDays} day${diffInDays > 1 ? 's' : ''} ago)`;
+        return `Frequent commits (last commit ${diffInDays} day${diffInDays > 1 ? 's' : ''} ago)`;
       } else {
         const diffInMonths = Math.floor(diffInDays / 30); // Simplified month calculation.
         return `Low recent activity (no commits in ${diffInMonths} month${diffInMonths > 1 ? 's' : ''})`;
